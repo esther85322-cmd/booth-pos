@@ -215,11 +215,15 @@
   .tx-delete:hover{color:var(--danger);background:var(--danger-soft);}
   .table-scroll{overflow-x:auto;}
 
-  .stocktake-row{display:grid;grid-template-columns:1.5fr .8fr 1fr .8fr .9fr;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);font-size:13px;min-width:480px;}
-  .stocktake-row.head{color:var(--ink-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;}
+  .stocktake-row{display:flex;flex-direction:column;gap:6px;padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px;}
   .stocktake-row:last-child{border-bottom:none;}
-  .stocktake-row span.mono{text-align:right;}
-  .stocktake-closing-input{width:100%;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
+  .stk-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .stk-name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .stk-opening{font-size:12px;color:var(--ink-faint);white-space:nowrap;}
+  .stk-bottom{display:flex;align-items:center;gap:10px;}
+  .stocktake-closing-input{width:84px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
+  .stk-result{font-size:12.5px;color:var(--ink-soft);}
+  .stk-result b{font-family:var(--font-mono);color:var(--ink);}
   .stocktake-totals{margin-top:12px;padding:10px 12px;background:var(--accent-soft);border-radius:var(--radius-m);font-size:13px;font-weight:600;color:var(--accent-strong);}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
@@ -240,7 +244,7 @@
 
   /* Modals */
   .modal-overlay{position:fixed;inset:0;background:rgba(10,15,12,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
-  .modal{background:var(--surface);border-radius:var(--radius-l);width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+  .modal{background:var(--surface);border-radius:var(--radius-l);width:100%;max-width:420px;max-height:88vh;max-height:88dvh;overflow-y:auto;box-shadow:var(--shadow-md);}
   .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;}
   .modal-head h3{margin:0;font-family:var(--font-display);font-size:16.5px;}
   .modal-close{border:none;background:transparent;font-size:18px;cursor:pointer;color:var(--ink-faint);width:28px;height:28px;border-radius:8px;}
@@ -495,9 +499,12 @@
       <div class="card">
         <div class="section-head">
           <span class="section-title">銷售報表</span>
-          <div class="scope-toggle">
-            <button class="scope-btn active" data-scope="today">今日</button>
-            <button class="scope-btn" data-scope="all">全部</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="openStocktakeBtn">收攤盤點</button>
+            <div class="scope-toggle">
+              <button class="scope-btn active" data-scope="today">今日</button>
+              <button class="scope-btn" data-scope="all">全部</button>
+            </div>
           </div>
         </div>
         <div class="range-row">
@@ -528,9 +535,8 @@
       <div class="card">
         <div class="section-head">
           <span class="section-title">今日盤點結算</span>
-          <button class="btn btn-primary btn-sm" id="openStocktakeBtn">期末盤點</button>
         </div>
-        <p class="hint" style="margin:0 0 12px;">開賣前確認好的「期初」庫存，收攤後點「期末盤點」輸入實際剩下的數量，就會自動算出今天每項賣出的數量與金額，方便回去登打主系統的出貨單。</p>
+        <p class="hint" style="margin:0 0 12px;">開賣前確認好的「期初」庫存，收攤後點右上角「收攤盤點」輸入實際剩下的數量，就會自動算出今天每項賣出的數量與金額，方便回去登打主系統的出貨單。</p>
         <div id="stocktakeSummary"><div class="empty-state">今天還沒有盤點紀錄</div></div>
         <div class="export-row" id="stocktakeExportRow" hidden>
           <button class="btn btn-sm" id="exportStocktakeBtn">匯出盤點結算表 (CSV)</button>
@@ -730,12 +736,10 @@
 
 <div class="modal-overlay" id="stocktakeModal" hidden>
   <div class="modal receipt-modal">
-    <div class="modal-head"><h3>期末盤點</h3><button class="modal-close" id="stocktakeModalCloseX">✕</button></div>
+    <div class="modal-head"><h3>收攤盤點</h3><button class="modal-close" id="stocktakeModalCloseX">✕</button></div>
     <div class="modal-body">
       <p class="hint" style="margin:0 0 12px;">「期初」是今天開賣前確認的庫存數量。請在「期末剩餘」欄位輸入收攤後實際盤點剩下的數量，系統會自動算出今天賣出的數量與金額。秤重計價商品不列入盤點。</p>
-      <div class="table-scroll">
-        <div id="stocktakeRows"></div>
-      </div>
+      <div id="stocktakeRows"></div>
       <div class="stocktake-totals" id="stocktakeTotals">尚未輸入任何期末數量</div>
     </div>
     <div class="modal-actions">
@@ -1889,20 +1893,23 @@
       state.stocktakeResult.rows.forEach(function(r){ prevClosing[r.id] = r.closing; });
     }
     var wrap = document.getElementById("stocktakeRows");
-    wrap.innerHTML = '<div class="stocktake-row head"><span>商品</span><span>期初</span><span>期末剩餘</span><span>賣出</span><span>金額</span></div>' +
-      products.map(function(p){
+    wrap.innerHTML = products.map(function(p){
         var opening = p.openingStock!=null ? p.openingStock : p.stock;
         var prefill = prevClosing[p.id]!=null ? prevClosing[p.id] : "";
         return '<div class="stocktake-row" data-id="' + p.id + '" data-opening="' + opening + '" data-price="' + p.price + '">' +
-          '<span>' + escapeHtml(p.name) + '</span>' +
-          '<span class="mono">' + opening + '</span>' +
-          '<input class="stocktake-closing-input mono" type="number" inputmode="numeric" min="0" value="' + prefill + '" />' +
-          '<span class="mono stocktake-sold">-</span>' +
-          '<span class="mono stocktake-amount">-</span>' +
+          '<div class="stk-top"><span class="stk-name">' + escapeHtml(p.name) + '</span><span class="stk-opening">期初 ' + opening + '</span></div>' +
+          '<div class="stk-bottom">' +
+            '<input class="stocktake-closing-input mono" type="number" inputmode="numeric" min="0" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="剩餘" value="' + prefill + '" />' +
+            '<span class="stk-result">賣出 <b class="stocktake-sold">-</b> 件・<b class="stocktake-amount">-</b></span>' +
+          '</div>' +
         '</div>';
       }).join("");
     wrap.querySelectorAll(".stocktake-row[data-id]").forEach(function(row){
-      row.querySelector(".stocktake-closing-input").addEventListener("input", function(){ updateStocktakeRow(row); updateStocktakeTotals(); });
+      var input = row.querySelector(".stocktake-closing-input");
+      input.addEventListener("input", function(){ updateStocktakeRow(row); updateStocktakeTotals(); });
+      input.addEventListener("focus", function(){
+        setTimeout(function(){ input.scrollIntoView({block:"center", behavior:"smooth"}); }, 300);
+      });
       updateStocktakeRow(row);
     });
     updateStocktakeTotals();
@@ -1950,11 +1957,13 @@
     var savedLabel = new Date(r.savedAt).toLocaleString("zh-TW",{hour:"2-digit",minute:"2-digit"});
     var sorted = r.rows.slice().sort(function(a,b){return b.soldQty-a.soldQty;});
     wrap.innerHTML = '<p class="hint" style="margin:0 0 10px;">' + savedLabel + ' 盤點　合計賣出 ' + r.totalQty + ' 件　' + fmt(r.totalAmount) + '</p>' +
-      '<div class="table-scroll"><div id="stocktakeSummaryRows">' +
-      '<div class="stocktake-row head"><span>商品</span><span>期初</span><span>期末</span><span>賣出</span><span>金額</span></div>' +
+      '<div id="stocktakeSummaryRows">' +
       sorted.map(function(row){
-        return '<div class="stocktake-row"><span>' + escapeHtml(row.name) + '</span><span class="mono">' + row.opening + '</span><span class="mono">' + row.closing + '</span><span class="mono">' + row.soldQty + '</span><span class="mono">' + fmt(row.amount) + '</span></div>';
-      }).join("") + '</div></div>';
+        return '<div class="stocktake-row">' +
+          '<div class="stk-top"><span class="stk-name">' + escapeHtml(row.name) + '</span><span class="stk-opening">期初 ' + row.opening + '　期末 ' + row.closing + '</span></div>' +
+          '<div class="stk-bottom"><span class="stk-result">賣出 <b>' + row.soldQty + '</b> 件・<b>' + fmt(row.amount) + '</b></span></div>' +
+        '</div>';
+      }).join("") + '</div>';
     exportRow.hidden = false;
   }
 
