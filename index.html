@@ -214,6 +214,13 @@
   .tx-delete{width:26px;height:26px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--ink-faint);cursor:pointer;}
   .tx-delete:hover{color:var(--danger);background:var(--danger-soft);}
   .table-scroll{overflow-x:auto;}
+
+  .stocktake-row{display:grid;grid-template-columns:1.5fr .8fr 1fr .8fr .9fr;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);font-size:13px;min-width:480px;}
+  .stocktake-row.head{color:var(--ink-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;}
+  .stocktake-row:last-child{border-bottom:none;}
+  .stocktake-row span.mono{text-align:right;}
+  .stocktake-closing-input{width:100%;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
+  .stocktake-totals{margin-top:12px;padding:10px 12px;background:var(--accent-soft);border-radius:var(--radius-m);font-size:13px;font-weight:600;color:var(--accent-strong);}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
   .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
@@ -519,6 +526,18 @@
       </div>
 
       <div class="card">
+        <div class="section-head">
+          <span class="section-title">今日盤點結算</span>
+          <button class="btn btn-primary btn-sm" id="openStocktakeBtn">期末盤點</button>
+        </div>
+        <p class="hint" style="margin:0 0 12px;">開賣前確認好的「期初」庫存，收攤後點「期末盤點」輸入實際剩下的數量，就會自動算出今天每項賣出的數量與金額，方便回去登打主系統的出貨單。</p>
+        <div id="stocktakeSummary"><div class="empty-state">今天還沒有盤點紀錄</div></div>
+        <div class="export-row" id="stocktakeExportRow" hidden>
+          <button class="btn btn-sm" id="exportStocktakeBtn">匯出盤點結算表 (CSV)</button>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="section-head"><span class="section-title">熱銷商品</span></div>
         <div id="rankList"></div>
       </div>
@@ -532,7 +551,6 @@
         <div class="export-row">
           <button class="btn btn-sm" id="printReportBtn">列印銷售總表</button>
           <button class="btn btn-sm" id="exportTxBtn">匯出交易紀錄 (CSV)</button>
-          <button class="btn btn-sm" id="exportSalesSummaryBtn">匯出商品銷售總表 (CSV)</button>
           <button class="btn btn-sm" id="exportProductsBtn">匯出商品清單 (CSV)</button>
         </div>
       </div>
@@ -710,6 +728,23 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="stocktakeModal" hidden>
+  <div class="modal receipt-modal">
+    <div class="modal-head"><h3>期末盤點</h3><button class="modal-close" id="stocktakeModalCloseX">✕</button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin:0 0 12px;">「期初」是今天開賣前確認的庫存數量。請在「期末剩餘」欄位輸入收攤後實際盤點剩下的數量，系統會自動算出今天賣出的數量與金額。秤重計價商品不列入盤點。</p>
+      <div class="table-scroll">
+        <div id="stocktakeRows"></div>
+      </div>
+      <div class="stocktake-totals" id="stocktakeTotals">尚未輸入任何期末數量</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="stocktakeModalCancel">取消</button>
+      <button class="btn btn-primary btn-sm" id="stocktakeModalSave">儲存並產生結算表</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="deleteBoothModal" hidden>
   <div class="modal">
     <div class="modal-head"><h3>刪除攤位</h3><button class="modal-close" id="deleteBoothCloseX">✕</button></div>
@@ -777,56 +812,56 @@
       isSample: false,
       sessionDate: todayStr(),
       products: [
-        {id:genId(), name:"有機糙米1.5kg", price:200, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機白米1.5kg", price:240, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機糯米1.3kg", price:240, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機秈糙米1.5kg", price:240, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機紫米700g", price:300, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米麩200g", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機玄米茶罐375g", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機玄米茶包200g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機熟米糠150g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"蝦米菓", price:165, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米餅", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米菓(原味)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米菓(紫米)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機玉米菓(原味)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米菓小包(黑糖)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米菓小包(可可)", price:165, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米菓小包(起司)", price:165, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機米菓(原味)罐", price:0, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(綜合)", price:0, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(紫米)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(蔥)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(咖啡)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(可可)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(芝麻)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"米蛋捲(海苔)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"伯爵米蛋捲", price:0, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機黃豆300g", price:125, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機黃豆600g", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機茶豆300g", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機黑豆300g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機黑豆600g", price:300, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機綠豆300g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機紅豆300g", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機玉米粉", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機小米", price:220, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機洛神茶乾", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機黃薑粉100g", price:350, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機仙草調理包", price:110, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機草莓乾", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機香蕉乾", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機嘉寶果乾", price:220, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機黑豆乾", price:220, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機綜合荳", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機綜合蔬菜乾", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"有機綜合水果乾", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"鳳梨乾(速)外", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"芒果乾(速)外", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"嘉寶果洛神Q乾", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"蘿蔔乾", price:40, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
-        {id:genId(), name:"嘉寶果濃縮汁", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null}
+        {id:genId(), name:"有機糙米1.5kg", price:200, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機白米1.5kg", price:240, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機糯米1.3kg", price:240, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機秈糙米1.5kg", price:240, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機紫米700g", price:300, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米麩200g", price:100, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玄米茶罐375g", price:250, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玄米茶包200g", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機熟米糠150g", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"蝦米菓", price:165, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米餅", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓(原味)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓(紫米)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玉米菓(原味)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓小包(黑糖)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓小包(可可)", price:165, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓小包(起司)", price:165, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓(原味)罐", price:0, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(綜合)", price:0, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(紫米)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(蔥)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(咖啡)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(可可)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(芝麻)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(海苔)", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"伯爵米蛋捲", price:0, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黃豆300g", price:125, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黃豆600g", price:250, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機茶豆300g", price:100, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黑豆300g", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黑豆600g", price:300, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綠豆300g", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機紅豆300g", price:250, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玉米粉", price:100, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機小米", price:220, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機洛神茶乾", price:250, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黃薑粉100g", price:350, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機仙草調理包", price:110, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機草莓乾", price:250, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機香蕉乾", price:100, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機嘉寶果乾", price:220, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黑豆乾", price:220, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綜合荳", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綜合蔬菜乾", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綜合水果乾", price:150, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"鳳梨乾(速)外", price:100, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"芒果乾(速)外", price:100, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"嘉寶果洛神Q乾", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"蘿蔔乾", price:40, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"嘉寶果濃縮汁", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null}
       ],
       sales: [],
       preorders: []
@@ -1436,11 +1471,11 @@
       var priceInput = row.querySelector('[data-f="price"]');
       if(priceInput) priceInput.addEventListener("change", function(e){ p.price = Math.max(0, Number(e.target.value)||0); markDirty(); saveState(); renderProductGrid(); });
       var stockInput = row.querySelector('[data-f="stock"]');
-      if(stockInput) stockInput.addEventListener("change", function(e){ p.stock = Math.max(0, Math.floor(Number(e.target.value)||0)); markDirty(); saveState(); renderProductGrid(); });
+      if(stockInput) stockInput.addEventListener("change", function(e){ p.stock = Math.max(0, Math.floor(Number(e.target.value)||0)); p.openingStock = p.stock; markDirty(); saveState(); renderProductGrid(); });
       var stockIncBtn = row.querySelector('[data-act="stock-inc"]');
-      if(stockIncBtn) stockIncBtn.addEventListener("click", function(){ p.stock += 1; markDirty(); saveState(); renderProducts(); renderProductGrid(); });
+      if(stockIncBtn) stockIncBtn.addEventListener("click", function(){ p.stock += 1; p.openingStock = p.stock; markDirty(); saveState(); renderProducts(); renderProductGrid(); });
       var stockDecBtn = row.querySelector('[data-act="stock-dec"]');
-      if(stockDecBtn) stockDecBtn.addEventListener("click", function(){ p.stock = Math.max(0,p.stock-1); markDirty(); saveState(); renderProducts(); renderProductGrid(); });
+      if(stockDecBtn) stockDecBtn.addEventListener("click", function(){ p.stock = Math.max(0,p.stock-1); p.openingStock = p.stock; markDirty(); saveState(); renderProducts(); renderProductGrid(); });
       row.querySelector('[data-act="fav"]').addEventListener("click", function(){ toggleFavorite(p); });
       row.querySelector('[data-act="edit"]').addEventListener("click", function(){ openProductModal(p); });
       row.querySelector('[data-act="delete"]').addEventListener("click", function(){
@@ -1541,9 +1576,13 @@
     patch.category = category;
     if(editingProductId){
       var existing = state.products.find(function(x){return x.id===editingProductId;});
-      if(existing) Object.assign(existing, patch);
+      if(existing){
+        if(pfPricingType!=="weighed" && patch.stock !== existing.stock) patch.openingStock = patch.stock;
+        Object.assign(existing, patch);
+      }
     } else {
       patch.id = genId();
+      if(pfPricingType!=="weighed") patch.openingStock = patch.stock;
       state.products.push(patch);
     }
     markDirty(); saveState(); renderProducts(); renderProductGrid(); renderCart();
@@ -1807,24 +1846,130 @@
     saveFile(fname, toCsv(rows));
   });
 
-  document.getElementById("exportSalesSummaryBtn").addEventListener("click", function(){
-    var qtyMap = buildQtyMap(scopedSales());
-    var rows = [["品名","單價","數量","金額"]];
-    state.products.forEach(function(p){
-      var agg = qtyMap[p.name];
-      rows.push([
-        p.name,
-        p.pricingType==="weighed" ? "秤重" : p.price,
-        agg ? agg.qty : 0,
-        agg ? agg.revenue : 0
-      ]);
+  /* ---------- End-of-day stocktake reconciliation ---------- */
+  function stocktakeableProducts(){
+    return state.products.filter(function(p){ return p.pricingType !== "weighed"; });
+  }
+
+  function updateStocktakeRow(row){
+    var opening = Number(row.dataset.opening);
+    var input = row.querySelector(".stocktake-closing-input");
+    var soldEl = row.querySelector(".stocktake-sold");
+    var amtEl = row.querySelector(".stocktake-amount");
+    if(input.value === ""){ soldEl.textContent = "-"; amtEl.textContent = "-"; return; }
+    var price = Number(row.dataset.price);
+    var closing = Math.max(0, Math.floor(Number(input.value)||0));
+    var sold = Math.max(0, opening - closing);
+    soldEl.textContent = sold;
+    amtEl.textContent = fmt(sold*price);
+  }
+
+  function updateStocktakeTotals(){
+    var rows = document.querySelectorAll("#stocktakeRows .stocktake-row[data-id]");
+    var totalQty=0, totalAmount=0, filled=0;
+    rows.forEach(function(row){
+      var input = row.querySelector(".stocktake-closing-input");
+      if(input.value==="") return;
+      filled++;
+      var opening = Number(row.dataset.opening);
+      var price = Number(row.dataset.price);
+      var closing = Math.max(0, Math.floor(Number(input.value)||0));
+      var sold = Math.max(0, opening-closing);
+      totalQty += sold; totalAmount += sold*price;
     });
-    var totalQtySum = Object.keys(qtyMap).reduce(function(s,name){ return s + qtyMap[name].qty; }, 0);
-    var totalRevenueSum = Object.keys(qtyMap).reduce(function(s,name){ return s + qtyMap[name].revenue; }, 0);
-    rows.push(["總計", "", totalQtySum, totalRevenueSum]);
-    var fname = "商品銷售總表-" + scopeLabel().replace(/[\/\\?%*:|"<>~]/g,"-") + "-" + new Date().toISOString().slice(0,10) + ".csv";
+    document.getElementById("stocktakeTotals").textContent =
+      "已填 " + filled + " / " + rows.length + " 項　合計賣出 " + totalQty + " 件　" + fmt(totalAmount);
+  }
+
+  function openStocktakeModal(){
+    var products = stocktakeableProducts();
+    if(products.length===0){ toast("目前沒有可盤點的商品"); return; }
+    var prevClosing = {};
+    if(state.stocktakeResult && state.stocktakeResult.date === todayStr()){
+      state.stocktakeResult.rows.forEach(function(r){ prevClosing[r.id] = r.closing; });
+    }
+    var wrap = document.getElementById("stocktakeRows");
+    wrap.innerHTML = '<div class="stocktake-row head"><span>商品</span><span>期初</span><span>期末剩餘</span><span>賣出</span><span>金額</span></div>' +
+      products.map(function(p){
+        var opening = p.openingStock!=null ? p.openingStock : p.stock;
+        var prefill = prevClosing[p.id]!=null ? prevClosing[p.id] : "";
+        return '<div class="stocktake-row" data-id="' + p.id + '" data-opening="' + opening + '" data-price="' + p.price + '">' +
+          '<span>' + escapeHtml(p.name) + '</span>' +
+          '<span class="mono">' + opening + '</span>' +
+          '<input class="stocktake-closing-input mono" type="number" inputmode="numeric" min="0" value="' + prefill + '" />' +
+          '<span class="mono stocktake-sold">-</span>' +
+          '<span class="mono stocktake-amount">-</span>' +
+        '</div>';
+      }).join("");
+    wrap.querySelectorAll(".stocktake-row[data-id]").forEach(function(row){
+      row.querySelector(".stocktake-closing-input").addEventListener("input", function(){ updateStocktakeRow(row); updateStocktakeTotals(); });
+      updateStocktakeRow(row);
+    });
+    updateStocktakeTotals();
+    document.getElementById("stocktakeModal").hidden = false;
+  }
+  function closeStocktakeModal(){ document.getElementById("stocktakeModal").hidden = true; }
+  document.getElementById("openStocktakeBtn").addEventListener("click", openStocktakeModal);
+  document.getElementById("stocktakeModalCloseX").addEventListener("click", closeStocktakeModal);
+  document.getElementById("stocktakeModalCancel").addEventListener("click", closeStocktakeModal);
+  document.getElementById("stocktakeModalSave").addEventListener("click", function(){
+    var rows = document.querySelectorAll("#stocktakeRows .stocktake-row[data-id]");
+    var resultRows = [];
+    var missing = 0;
+    rows.forEach(function(row){
+      var input = row.querySelector(".stocktake-closing-input");
+      if(input.value === ""){ missing++; return; }
+      var p = state.products.find(function(x){return x.id===row.dataset.id;});
+      if(!p) return;
+      var opening = Number(row.dataset.opening);
+      var closing = Math.max(0, Math.floor(Number(input.value)||0));
+      var sold = Math.max(0, opening-closing);
+      var amount = sold*p.price;
+      p.stock = closing;
+      resultRows.push({id:p.id, name:p.name, opening:opening, closing:closing, soldQty:sold, price:p.price, amount:amount});
+    });
+    if(resultRows.length===0){ toast("請至少輸入一項商品的期末剩餘數量"); return; }
+    if(missing>0) toast("有 " + missing + " 項商品未輸入，已略過");
+    var totalQty = resultRows.reduce(function(s,r){return s+r.soldQty;},0);
+    var totalAmount = resultRows.reduce(function(s,r){return s+r.amount;},0);
+    state.stocktakeResult = { date: todayStr(), savedAt: new Date().toISOString(), rows: resultRows, totalQty: totalQty, totalAmount: totalAmount };
+    markDirty(); saveState(); renderProducts(); renderProductGrid(); renderStocktakeSummary();
+    closeStocktakeModal();
+    toast("盤點結算已儲存");
+  });
+
+  function renderStocktakeSummary(){
+    var wrap = document.getElementById("stocktakeSummary");
+    var exportRow = document.getElementById("stocktakeExportRow");
+    var r = state.stocktakeResult;
+    if(!r || r.date !== todayStr()){
+      wrap.innerHTML = '<div class="empty-state">今天還沒有盤點紀錄</div>';
+      exportRow.hidden = true;
+      return;
+    }
+    var savedLabel = new Date(r.savedAt).toLocaleString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+    var sorted = r.rows.slice().sort(function(a,b){return b.soldQty-a.soldQty;});
+    wrap.innerHTML = '<p class="hint" style="margin:0 0 10px;">' + savedLabel + ' 盤點　合計賣出 ' + r.totalQty + ' 件　' + fmt(r.totalAmount) + '</p>' +
+      '<div class="table-scroll"><div id="stocktakeSummaryRows">' +
+      '<div class="stocktake-row head"><span>商品</span><span>期初</span><span>期末</span><span>賣出</span><span>金額</span></div>' +
+      sorted.map(function(row){
+        return '<div class="stocktake-row"><span>' + escapeHtml(row.name) + '</span><span class="mono">' + row.opening + '</span><span class="mono">' + row.closing + '</span><span class="mono">' + row.soldQty + '</span><span class="mono">' + fmt(row.amount) + '</span></div>';
+      }).join("") + '</div></div>';
+    exportRow.hidden = false;
+  }
+
+  document.getElementById("exportStocktakeBtn").addEventListener("click", function(){
+    var r = state.stocktakeResult;
+    if(!r || r.date !== todayStr()){ toast("請先完成今日盤點"); return; }
+    var rows = [["品名","期初數量","期末剩餘","賣出數量","單價","金額"]];
+    r.rows.forEach(function(row){
+      rows.push([row.name, row.opening, row.closing, row.soldQty, row.price, row.amount]);
+    });
+    rows.push(["總計","","",r.totalQty,"",r.totalAmount]);
+    var fname = "盤點結算表-" + r.date + ".csv";
     saveFile(fname, toCsv(rows));
   });
+
   document.getElementById("exportProductsBtn").addEventListener("click", function(){
     var rows = [["商品名稱","編號","計價方式","單價","多件特價","庫存"]];
     state.products.forEach(function(p){
@@ -1944,8 +2089,12 @@
       var archiveRef = db.doc(DB_COLLECTION + "/" + boothCode + "/sessions/" + prevDate);
       archiveRef.set(archive).then(function(){
         state.sales = [];
-        state.products = state.products.map(function(p){ return Object.assign({}, p, {stock: p.pricingType==="weighed" ? p.stock : (p.defaultStock||0)}); });
+        state.products = state.products.map(function(p){
+          var newStock = p.pricingType==="weighed" ? p.stock : (p.defaultStock||0);
+          return Object.assign({}, p, {stock: newStock, openingStock: p.pricingType==="weighed" ? (p.openingStock||0) : newStock});
+        });
         state.sessionDate = today;
+        state.stocktakeResult = null;
         cart = [];
         saveState();
         hideSessionGate();
@@ -2141,7 +2290,7 @@
   function refreshAllUI(){
     document.getElementById("eventNameDisplay").textContent = state.eventName || "迦南地 市集攤位POS系統";
     document.getElementById("boothBadgeDisplay").textContent = boothCode ? (boothCode.toUpperCase() + " ・ ") : "";
-    renderProductGrid(); renderCart(); renderProducts(); renderReports(); renderSettings();
+    renderProductGrid(); renderCart(); renderProducts(); renderReports(); renderSettings(); renderStocktakeSummary();
     updatePreorderBadge();
   }
 
