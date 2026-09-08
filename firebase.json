@@ -6,6 +6,11 @@
       ".firebaserc",
       "firestore.rules",
       "firestore.indexes.json",
+      "DEPLOY.md",
+      ".gitignore",
+      ".git",
+      ".git/**",
+      "**/.git/**",
       "**/.*",
       "**/node_modules/**"
     ]

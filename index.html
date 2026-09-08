@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>攤位收銀台</title>
+<title>迦南地 市集攤位POS系統</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -171,6 +173,11 @@
 
   /* Reports */
   .range-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:14px;}
+  .category-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .category-pill{padding:6px 13px;border-radius:99px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--ink-soft);}
+  .category-pill:hover{border-color:var(--accent);}
+  .category-pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:600;}
+  .pr-category-tag{font-size:10.5px;color:var(--ink-soft);background:var(--surface-3);padding:2px 7px;border-radius:99px;width:fit-content;margin:2px 0 0 6px;}
   .scope-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;}
   .scope-btn{border:none;background:transparent;padding:6px 12px;border-radius:8px;cursor:pointer;color:var(--ink-soft);font-weight:500;font-size:13px;}
   .scope-btn.active{background:var(--surface);box-shadow:var(--shadow-sm);color:var(--ink);}
@@ -303,8 +310,8 @@
 
 <div class="gate-overlay" id="boothGate">
   <div class="gate-card">
-    <img class="gate-logo" src="assets/logo.png" alt="攤位收銀台" width="900" height="599" />
-    <h1>攤位收銀台</h1>
+    <img class="gate-logo" src="assets/logo.png" alt="迦南地 市集攤位POS系統" width="900" height="599" />
+    <h1>迦南地 市集攤位POS系統</h1>
     <p class="gate-sub">選擇已註冊的攤位，輸入密碼登入。相同攤位的裝置會共用同一份商品、庫存與銷售資料並即時同步。</p>
 
     <div class="gate-section" id="gateListSection">
@@ -355,9 +362,9 @@
 
 <div class="gate-overlay" id="sessionGate" hidden>
   <div class="gate-card">
-    <img class="gate-logo" src="assets/logo.png" alt="攤位收銀台" width="900" height="599" />
+    <img class="gate-logo" src="assets/logo.png" alt="迦南地 市集攤位POS系統" width="900" height="599" />
     <h1>選擇今天的場次</h1>
-    <p class="gate-sub">上次使用的場次是 <strong id="lastSessionDateLabel"></strong>。開始新的一天，商品名稱與價格會自動沿用，但庫存會全部歸零，需要重新設定；也可以先看看之前的場次紀錄。</p>
+    <p class="gate-sub">上次使用的場次是 <strong id="lastSessionDateLabel"></strong>。開始新的一天，商品名稱與價格會自動沿用，庫存會套用每個商品設定的「預設庫存」（沒設定的則歸零）；也可以先看看之前的場次紀錄。</p>
     <button class="btn btn-primary" id="startNewSessionBtn" style="width:100%;justify-content:center;">＋ 開始今天的新場次</button>
     <button class="btn btn-sm" id="continueOldSessionBtn" style="width:100%;justify-content:center;">先不要，直接進入目前資料</button>
     <div class="gate-section">
@@ -371,9 +378,9 @@
 <div id="app">
   <header class="topbar">
     <div class="brand">
-      <img class="brand-logo" src="assets/logo.png" alt="攤位收銀台" width="900" height="599" />
+      <img class="brand-logo" src="assets/logo.png" alt="迦南地 市集攤位POS系統" width="900" height="599" />
       <div class="brand-text">
-        <span class="brand-name" id="eventNameDisplay">攤位收銀台</span>
+        <span class="brand-name" id="eventNameDisplay">迦南地 市集攤位POS系統</span>
         <span class="brand-sub"><span id="boothBadgeDisplay"></span><span id="clockDisplay">—</span></span>
       </div>
     </div>
@@ -411,6 +418,7 @@
             <input id="productSearch" class="search-input" placeholder="搜尋商品名稱或編號…" />
             <span class="sample-badge" id="sampleBadge" hidden>範例商品，可於「商品」頁編輯</span>
           </div>
+          <div class="category-filter" id="categoryFilterCheckout" hidden></div>
           <div id="productGrid" class="product-grid"></div>
         </div>
 
@@ -471,6 +479,7 @@
             <button class="btn btn-primary" id="addProductBtn">＋ 新增商品</button>
           </div>
         </div>
+        <div class="category-filter" id="categoryFilterProducts" hidden></div>
         <div id="productRows"></div>
       </div>
     </section>
@@ -610,12 +619,17 @@
         </div>
         <div class="field" id="pfPriceField"><label>單價</label><input id="pfPrice" type="number" inputmode="decimal" min="0" /></div>
         <div class="field" id="pfStockField"><label>初始庫存</label><input id="pfStock" type="number" inputmode="numeric" min="0" /></div>
+        <div class="field full" id="pfDefaultStockField">
+          <label>預設庫存（選填）</label>
+          <input id="pfDefaultStock" type="number" inputmode="numeric" min="0" placeholder="開始新場次時自動帶入這個數量，不填則為 0" />
+        </div>
         <div class="field full" id="pfBundleToggleField">
           <label class="checkbox-label"><input type="checkbox" id="pfBundleEnable" /> 多件特價（例如：3件100）</label>
         </div>
         <div class="field" id="pfBundleQtyField" hidden><label>特價件數</label><input id="pfBundleQty" type="number" inputmode="numeric" min="2" placeholder="例如：3" /></div>
         <div class="field" id="pfBundlePriceField" hidden><label>特價金額</label><input id="pfBundlePrice" type="number" inputmode="decimal" min="0" placeholder="例如：100" /></div>
         <div class="field full" id="pfWeighedHint" hidden><p class="hint" style="margin:0;">秤重商品不追蹤庫存，加入購物車後由現場人員輸入實際金額。</p></div>
+        <div class="field full"><label>分類（選填）</label><input id="pfCategory" list="categoryOptions" placeholder="例如：米類、豆類、果乾果汁" /><datalist id="categoryOptions"></datalist></div>
         <div class="field full"><label>編號 / SKU（選填）</label><input id="pfSku" /></div>
       </div>
     </div>
@@ -911,10 +925,27 @@
 
   function cartQtyOf(id){ var line = cart.find(function(c){return c.id===id;}); return line ? line.qty : 0; }
 
+  function renderCategoryPills(containerId, activeValue, onSelect){
+    var cats = distinctCategories();
+    var container = document.getElementById(containerId);
+    if(cats.length===0){ container.innerHTML = ""; container.hidden = true; return; }
+    container.hidden = false;
+    var all = [""].concat(cats);
+    container.innerHTML = all.map(function(c){
+      return '<button class="category-pill' + (c===activeValue?" active":"") + '" data-cat="' + escapeHtml(c) + '">' + (c===""?"全部":escapeHtml(c)) + "</button>";
+    }).join("");
+    container.querySelectorAll(".category-pill").forEach(function(btn){
+      btn.addEventListener("click", function(){ onSelect(btn.dataset.cat); });
+    });
+  }
+
+  var checkoutCategoryFilter = "";
   function renderProductGrid(){
+    renderCategoryPills("categoryFilterCheckout", checkoutCategoryFilter, function(cat){ checkoutCategoryFilter = cat; renderProductGrid(); });
     var q = productSearch.value.trim().toLowerCase();
     var grid = document.getElementById("productGrid");
     var items = state.products.filter(function(p){
+      if(checkoutCategoryFilter && (p.category||"") !== checkoutCategoryFilter) return false;
       if(!q) return true;
       return p.name.toLowerCase().indexOf(q)>-1 || (p.sku||"").toLowerCase().indexOf(q)>-1;
     });
@@ -1356,17 +1387,27 @@
   window.addEventListener("afterprint", function(){ document.getElementById("printArea").innerHTML=""; });
 
   /* ---------- Products tab ---------- */
+  var productsCategoryFilter = "";
   function renderProducts(){
+    renderCategoryPills("categoryFilterProducts", productsCategoryFilter, function(cat){ productsCategoryFilter = cat; renderProducts(); });
     var wrap = document.getElementById("productRows");
     if(state.products.length===0){
       wrap.innerHTML = '<div class="empty-state">尚未建立商品，點右上角「新增商品」開始建立你的展場商品清單</div>';
       return;
     }
+    var visible = state.products.filter(function(p){
+      return !productsCategoryFilter || (p.category||"") === productsCategoryFilter;
+    });
+    if(visible.length===0){
+      wrap.innerHTML = '<div class="empty-state">這個分類目前沒有商品</div>';
+      return;
+    }
     var favNames = loadFavorites().map(function(f){ return f.name; });
     wrap.innerHTML = '<div class="product-row head"><span>商品名稱</span><span>單價</span><span>庫存</span><span></span></div>' +
-      state.products.map(function(p){
+      visible.map(function(p){
         var isWeighed = p.pricingType === "weighed";
         var bundleNote = (!isWeighed && p.bundleQty && p.bundlePrice) ? ('<span class="pr-bundle-note">' + p.bundleQty + '件 ' + fmt(p.bundlePrice) + '</span>') : "";
+        var categoryTag = p.category ? ('<span class="pr-category-tag">' + escapeHtml(p.category) + '</span>') : "";
         var priceCell = isWeighed
           ? '<div class="pr-weighed-note">秤重計價</div>'
           : '<input class="pr-price-input mono" data-f="price" type="number" inputmode="decimal" min="0" value="' + p.price + '" />';
@@ -1380,7 +1421,7 @@
         var isFav = favNames.indexOf(p.name) > -1;
         var favBtn = '<button class="btn btn-sm fav-btn' + (isFav ? " active" : "") + '" data-act="fav" title="' + (isFav?"取消常用":"加入常用商品") + '">' + (isFav ? "★ 常用" : "☆ 常用") + '</button>';
         return '<div class="product-row" data-id="' + p.id + '">' +
-          '<div class="pr-name-wrap"><input class="pr-name-input" data-f="name" value="' + escapeHtml(p.name) + '" />' + (p.sku?'<span class="pr-sku">'+escapeHtml(p.sku)+'</span>':'') + bundleNote + '</div>' +
+          '<div class="pr-name-wrap"><input class="pr-name-input" data-f="name" value="' + escapeHtml(p.name) + '" />' + (p.sku?'<span class="pr-sku">'+escapeHtml(p.sku)+'</span>':'') + categoryTag + bundleNote + '</div>' +
           priceCell + stockCell +
           '<div class="product-actions">' + favBtn + '<button class="btn btn-sm" data-act="edit">編輯</button><button class="btn btn-sm btn-danger" data-act="delete">刪除</button></div>' +
         '</div>';
@@ -1420,6 +1461,7 @@
     var isWeighed = t === "weighed";
     document.getElementById("pfPriceField").hidden = isWeighed;
     document.getElementById("pfStockField").hidden = isWeighed;
+    document.getElementById("pfDefaultStockField").hidden = isWeighed;
     document.getElementById("pfBundleToggleField").hidden = isWeighed;
     document.getElementById("pfWeighedHint").hidden = !isWeighed;
     if(isWeighed){
@@ -1439,17 +1481,34 @@
   });
   document.getElementById("pfBundleEnable").addEventListener("change", updateBundleFieldsVisibility);
 
+  function distinctCategories(){
+    var seen = {};
+    var list = [];
+    state.products.forEach(function(p){
+      if(p.category && !seen[p.category]){ seen[p.category] = true; list.push(p.category); }
+    });
+    return list.sort(function(a,b){ return a.localeCompare(b, "zh-Hant"); });
+  }
+
+  function populateCategoryDatalist(){
+    var dl = document.getElementById("categoryOptions");
+    dl.innerHTML = distinctCategories().map(function(c){ return '<option value="' + escapeHtml(c) + '"></option>'; }).join("");
+  }
+
   function openProductModal(product){
     editingProductId = product ? product.id : null;
     document.getElementById("productModalTitle").textContent = product ? "編輯商品" : "新增商品";
     document.getElementById("pfName").value = product ? product.name : "";
     document.getElementById("pfSku").value = product ? (product.sku||"") : "";
+    document.getElementById("pfCategory").value = product ? (product.category||"") : "";
     document.getElementById("pfPrice").value = product ? product.price : "";
     document.getElementById("pfStock").value = product ? product.stock : "";
+    document.getElementById("pfDefaultStock").value = (product && product.defaultStock) ? product.defaultStock : "";
     var hasBundle = !!(product && product.bundleQty && product.bundlePrice);
     document.getElementById("pfBundleEnable").checked = hasBundle;
     document.getElementById("pfBundleQty").value = hasBundle ? product.bundleQty : "";
     document.getElementById("pfBundlePrice").value = hasBundle ? product.bundlePrice : "";
+    populateCategoryDatalist();
     setPfPricingType(product ? (product.pricingType||"unit") : "unit");
     document.getElementById("productModal").hidden = false;
     document.getElementById("pfName").focus();
@@ -1462,20 +1521,23 @@
     var name = document.getElementById("pfName").value.trim();
     if(!name){ toast("請輸入商品名稱"); return; }
     var sku = document.getElementById("pfSku").value.trim();
+    var category = document.getElementById("pfCategory").value.trim();
     var patch;
     if(pfPricingType === "weighed"){
-      patch = { pricingType:"weighed", price:0, stock:0, bundleQty:null, bundlePrice:null };
+      patch = { pricingType:"weighed", price:0, stock:0, defaultStock:0, bundleQty:null, bundlePrice:null };
     } else {
       var price = Math.max(0, Number(document.getElementById("pfPrice").value)||0);
       var stock = Math.max(0, Math.floor(Number(document.getElementById("pfStock").value)||0));
+      var defaultStock = Math.max(0, Math.floor(Number(document.getElementById("pfDefaultStock").value)||0));
       var bundleOn = document.getElementById("pfBundleEnable").checked;
       var bundleQty = bundleOn ? Math.max(2, Math.floor(Number(document.getElementById("pfBundleQty").value)||0)) : null;
       var bundlePrice = bundleOn ? Math.max(0, Number(document.getElementById("pfBundlePrice").value)||0) : null;
       if(bundleOn && (!bundleQty || !bundlePrice)){ toast("請完整輸入多件特價的件數與金額"); return; }
-      patch = { pricingType:"unit", price:price, stock:stock, bundleQty:bundleQty, bundlePrice:bundlePrice };
+      patch = { pricingType:"unit", price:price, stock:stock, defaultStock:defaultStock, bundleQty:bundleQty, bundlePrice:bundlePrice };
     }
     patch.name = name;
     patch.sku = sku;
+    patch.category = category;
     if(editingProductId){
       var existing = state.products.find(function(x){return x.id===editingProductId;});
       if(existing) Object.assign(existing, patch);
@@ -1849,7 +1911,7 @@
     var prevDate = state.sessionDate || todayStr();
     var today = todayStr();
     if(prevDate === today){ toast("今天已經是最新場次了"); return; }
-    confirmAction("開始新場次", "確定要開始今天（" + today + "）的新場次嗎？" + prevDate + " 的銷售紀錄會封存保留；商品庫存會全部歸零，請記得到「商品」頁重新輸入今天的庫存數量，商品名稱與價格會自動沿用。", function(){
+    confirmAction("開始新場次", "確定要開始今天（" + today + "）的新場次嗎？" + prevDate + " 的銷售紀錄會封存保留；商品庫存會重設為「預設庫存」（沒設定的則歸零），商品名稱與價格會自動沿用。", function(){
       var archive = {
         date: prevDate,
         eventName: state.eventName,
@@ -1862,13 +1924,13 @@
       var archiveRef = db.doc(DB_COLLECTION + "/" + boothCode + "/sessions/" + prevDate);
       archiveRef.set(archive).then(function(){
         state.sales = [];
-        state.products = state.products.map(function(p){ return Object.assign({}, p, {stock: p.pricingType==="weighed" ? p.stock : 0}); });
+        state.products = state.products.map(function(p){ return Object.assign({}, p, {stock: p.pricingType==="weighed" ? p.stock : (p.defaultStock||0)}); });
         state.sessionDate = today;
         cart = [];
         saveState();
         hideSessionGate();
         refreshAllUI();
-        toast("已開始今天的新場次，記得到「商品」頁設定今天的庫存");
+        toast("已開始今天的新場次，庫存已套用預設數量");
       }).catch(function(e){ toast("封存失敗：" + (e && e.message ? e.message : "")); });
     });
   }
@@ -1918,7 +1980,7 @@
   document.getElementById("sessionViewCloseX").addEventListener("click", closeSessionView);
   document.getElementById("eventNameInput").addEventListener("input", function(e){
     state.eventName = e.target.value;
-    document.getElementById("eventNameDisplay").textContent = e.target.value || "攤位收銀台";
+    document.getElementById("eventNameDisplay").textContent = e.target.value || "迦南地 市集攤位POS系統";
     saveState();
   });
   document.getElementById("currencyInput").addEventListener("input", function(e){
@@ -2057,7 +2119,7 @@
   }
 
   function refreshAllUI(){
-    document.getElementById("eventNameDisplay").textContent = state.eventName || "攤位收銀台";
+    document.getElementById("eventNameDisplay").textContent = state.eventName || "迦南地 市集攤位POS系統";
     document.getElementById("boothBadgeDisplay").textContent = boothCode ? (boothCode.toUpperCase() + " ・ ") : "";
     renderProductGrid(); renderCart(); renderProducts(); renderReports(); renderSettings();
     updatePreorderBadge();
