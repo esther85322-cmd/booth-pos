@@ -532,6 +532,7 @@
         <div class="export-row">
           <button class="btn btn-sm" id="printReportBtn">列印銷售總表</button>
           <button class="btn btn-sm" id="exportTxBtn">匯出交易紀錄 (CSV)</button>
+          <button class="btn btn-sm" id="exportSalesSummaryBtn">匯出商品銷售總表 (CSV)</button>
           <button class="btn btn-sm" id="exportProductsBtn">匯出商品清單 (CSV)</button>
         </div>
       </div>
@@ -1803,6 +1804,25 @@
       ]);
     });
     var fname = "交易紀錄-" + scopeLabel().replace(/[\/\\?%*:|"<>~]/g,"-") + "-" + new Date().toISOString().slice(0,10) + ".csv";
+    saveFile(fname, toCsv(rows));
+  });
+
+  document.getElementById("exportSalesSummaryBtn").addEventListener("click", function(){
+    var qtyMap = buildQtyMap(scopedSales());
+    var rows = [["品名","單價","數量","金額"]];
+    state.products.forEach(function(p){
+      var agg = qtyMap[p.name];
+      rows.push([
+        p.name,
+        p.pricingType==="weighed" ? "秤重" : p.price,
+        agg ? agg.qty : 0,
+        agg ? agg.revenue : 0
+      ]);
+    });
+    var totalQtySum = Object.keys(qtyMap).reduce(function(s,name){ return s + qtyMap[name].qty; }, 0);
+    var totalRevenueSum = Object.keys(qtyMap).reduce(function(s,name){ return s + qtyMap[name].revenue; }, 0);
+    rows.push(["總計", "", totalQtySum, totalRevenueSum]);
+    var fname = "商品銷售總表-" + scopeLabel().replace(/[\/\\?%*:|"<>~]/g,"-") + "-" + new Date().toISOString().slice(0,10) + ".csv";
     saveFile(fname, toCsv(rows));
   });
   document.getElementById("exportProductsBtn").addEventListener("click", function(){
