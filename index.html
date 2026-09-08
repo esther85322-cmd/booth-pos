@@ -1,0 +1,2301 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>攤位收銀台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#ffffff; --surface:#ffffff; --surface-2:#eef1ee; --surface-3:#dde5df;
+    --ink:#16211c; --ink-soft:#55655c; --ink-faint:#8b998f;
+    --line:#d3dbd5; --line-strong:#b9c4bd;
+    --accent:#1f8a5f; --accent-strong:#146b48; --accent-ink:#ffffff; --accent-soft:#dcefe3;
+    --amber:#b4720f; --amber-soft:#f3e3c8;
+    --danger:#b23a2a; --danger-soft:#f5dcd6;
+    --shadow-sm:0 1px 2px rgba(20,30,25,.07);
+    --shadow-md:0 10px 28px -12px rgba(20,30,25,.28);
+    --radius-s:8px; --radius-m:14px; --radius-l:20px;
+    --font-display:'Outfit',sans-serif; --font-body:'IBM Plex Sans',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  [hidden]{display:none!important;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important;} }
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14.5px;line-height:1.5;}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+  button,input{font-family:inherit;font-size:inherit;color:inherit;}
+  input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  #app{max-width:1180px;margin:0 auto;padding:14px 16px 90px;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:8px;}
+
+  /* Topbar */
+  .topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:10px 4px 16px;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;}
+  .brand-logo{height:56px;width:auto;flex-shrink:0;}
+  .gate-logo{width:min(320px,80%);height:auto;align-self:center;}
+  .brand-text{display:flex;flex-direction:column;min-width:0;}
+  .brand-name{font-family:var(--font-display);font-weight:600;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw;}
+  .brand-sub{font-size:12px;color:var(--ink-faint);font-family:var(--font-mono);}
+  .topbar-actions{display:flex;align-items:center;gap:8px;}
+  .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);padding:4px;border-radius:12px;box-shadow:var(--shadow-sm);}
+  .logout-btn{display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-weight:500;cursor:pointer;box-shadow:var(--shadow-sm);}
+  .logout-btn:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger);}
+  .tab-btn{display:flex;align-items:center;gap:6px;border:none;background:transparent;padding:8px 13px;border-radius:9px;font-weight:500;color:var(--ink-soft);cursor:pointer;}
+  .tab-btn svg{opacity:.85;}
+  .tab-btn.active{background:var(--accent);color:var(--accent-ink);}
+  .tab-btn.active svg{opacity:1;}
+  .tab-btn:not(.active):hover{background:var(--surface-2);}
+
+  main{display:block;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* Buttons */
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);padding:9px 14px;border-radius:10px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{background:var(--surface-2);}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+  .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+  .btn-danger{background:transparent;border-color:var(--danger);color:var(--danger);}
+  .btn-danger:hover{background:var(--danger-soft);}
+  .btn-danger-solid{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .btn-sm{padding:6px 10px;font-size:13px;border-radius:8px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* Checkout layout */
+  .checkout-layout{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start;}
+  .products-pane{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-l);padding:14px;box-shadow:var(--shadow-sm);}
+  .pane-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .search-input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink);font-size:16px;}
+  .sample-badge{font-size:11.5px;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:5px 9px;border-radius:99px;white-space:nowrap;}
+
+  .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;}
+  .product-card{text-align:left;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--radius-m);padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:96px;}
+  .product-card:hover{border-color:var(--accent);}
+  .product-card:active{transform:scale(.98);}
+  .product-card.sold-out{opacity:.5;cursor:not-allowed;}
+  .product-card.sold-out:hover{border-color:var(--line);}
+  .pc-name{font-weight:600;font-size:14px;}
+  .pc-sku{font-size:11px;color:var(--ink-faint);font-family:var(--font-mono);}
+  .pc-price{font-family:var(--font-mono);font-weight:600;color:var(--accent-strong);margin-top:auto;}
+  .pc-bundle{font-size:10.5px;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:2px 7px;border-radius:99px;width:fit-content;}
+  .pc-stock{font-size:11.5px;color:var(--ink-faint);}
+  .pc-stock.low{color:var(--amber);}
+  .pc-stock.out{color:var(--danger);}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--ink-faint);}
+
+  /* Cart */
+  .cart-pane{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-l);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:hidden;}
+  .cart-summary-bar{display:none;}
+  .cart-body{display:flex;flex-direction:column;min-height:0;flex:1;}
+  .cart-head{padding:14px 16px 10px;font-family:var(--font-display);font-weight:600;font-size:15px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .badge-count{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;margin-left:6px;border-radius:99px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;font-family:var(--font-mono);}
+  .cart-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .preorder-row{padding:10px 0;border-bottom:1px solid var(--line);}
+  .preorder-row:last-child{border-bottom:none;}
+  .preorder-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .preorder-customer{font-weight:600;font-size:13.5px;}
+  .preorder-meta{font-size:11.5px;color:var(--ink-faint);margin-top:1px;}
+  .preorder-items{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .preorder-actions{display:flex;gap:8px;margin-top:8px;}
+  .cart-items{overflow-y:auto;padding:8px 12px;flex:0 1 auto;min-height:0;}
+  .cart-empty{padding:26px 16px;text-align:center;color:var(--ink-faint);font-size:13.5px;}
+  .cart-item{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--line);}
+  .cart-item:last-child{border-bottom:none;}
+  .ci-info{flex:1;min-width:0;}
+  .ci-name{font-weight:500;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ci-unit{font-size:11.5px;color:var(--ink-faint);font-family:var(--font-mono);}
+  .ci-controls{display:flex;align-items:center;gap:6px;}
+  .qty-btn{width:24px;height:24px;border-radius:7px;border:1px solid var(--line-strong);background:var(--surface-2);cursor:pointer;line-height:1;font-weight:600;}
+  .qty-value{min-width:20px;text-align:center;font-family:var(--font-mono);font-size:13.5px;}
+  .ci-amount-input{width:84px;padding:6px 7px;border-radius:7px;border:1px solid var(--line-strong);background:var(--surface);text-align:right;font-family:var(--font-mono);font-size:16px;}
+  .cart-item.is-weighed .ci-amount-input{border-color:var(--amber);}
+  .ci-weighed-tag{font-size:10.5px;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:3px 8px;border-radius:99px;white-space:nowrap;}
+  .ci-remove{width:24px;height:24px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:14px;}
+  .ci-remove:hover{color:var(--danger);background:var(--danger-soft);}
+
+  .pay-section{padding:12px 16px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;background:var(--surface);}
+  .pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .pay-method-btn{padding:9px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-2);font-weight:500;cursor:pointer;}
+  .pay-method-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:600;}
+  .ptype-btn{padding:9px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-2);font-weight:500;cursor:pointer;}
+  .ptype-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:600;}
+  .quick-cash{display:flex;flex-wrap:wrap;gap:6px;}
+  .quick-cash-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);font-size:12.5px;font-family:var(--font-mono);cursor:pointer;}
+  .quick-cash-btn:hover{border-color:var(--accent);}
+  .cash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .cash-row label{color:var(--ink-soft);font-size:13px;}
+  .cash-input{width:130px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:right;font-family:var(--font-mono);font-size:16px;}
+  .change-row .change-value{font-family:var(--font-mono);font-weight:600;font-size:15px;}
+  .change-value.insufficient{color:var(--danger);}
+  .cart-total-row{display:flex;align-items:baseline;justify-content:space-between;padding-top:4px;border-top:1px dashed var(--line-strong);}
+  .cart-total-row span:first-child{color:var(--ink-soft);font-size:13px;}
+  .cart-total-row span:last-child{font-family:var(--font-mono);font-weight:700;font-size:20px;}
+  .checkout-btn{width:100%;padding:13px;border-radius:11px;border:none;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;cursor:pointer;}
+  .checkout-btn:hover:not(:disabled){background:var(--accent-strong);}
+  .checkout-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .checkout-msg{margin:0;font-size:12.5px;color:var(--danger);text-align:center;}
+  .cart-backdrop{display:none;}
+
+  /* Sections generic */
+  .section-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:19px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-l);padding:16px;box-shadow:var(--shadow-sm);}
+  .card + .card{margin-top:14px;}
+
+  /* Products table */
+  .product-row{display:grid;grid-template-columns:1.6fr .9fr 1.1fr auto;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .product-row:last-child{border-bottom:none;}
+  .product-row.head{color:var(--ink-faint);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding-bottom:8px;}
+  .pr-name-wrap{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .pr-name-input{border:1px solid transparent;background:transparent;font-weight:500;padding:4px 6px;border-radius:6px;width:100%;font-size:16px;}
+  .pr-name-input:hover,.pr-name-input:focus{border-color:var(--line-strong);background:var(--surface-2);}
+  .pr-sku{font-size:11px;color:var(--ink-faint);font-family:var(--font-mono);padding:0 6px;}
+  .pr-bundle-note{font-size:10.5px;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:2px 7px;border-radius:99px;width:fit-content;margin:2px 0 0 6px;}
+  .pr-weighed-note{font-size:12.5px;color:var(--ink-faint);}
+  .pr-price-input{width:88px;max-width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);font-family:var(--font-mono);text-align:right;font-size:16px;}
+  .stock-control{display:flex;align-items:center;gap:6px;}
+  .stock-input{width:64px;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
+  .product-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .fav-btn.active{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);font-weight:600;}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:12.5px;color:var(--ink-soft);}
+  .field input{padding:9px 11px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:16px;}
+  .checkbox-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);cursor:pointer;}
+  .checkbox-label input{width:auto;}
+
+  /* Reports */
+  .range-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:14px;}
+  .scope-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;}
+  .scope-btn{border:none;background:transparent;padding:6px 12px;border-radius:8px;cursor:pointer;color:var(--ink-soft);font-weight:500;font-size:13px;}
+  .scope-btn.active{background:var(--surface);box-shadow:var(--shadow-sm);color:var(--ink);}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  .stat-tile{background:var(--surface-2);border-radius:var(--radius-m);padding:14px;}
+  .stat-tile-label{font-size:12px;color:var(--ink-faint);}
+  .stat-tile-value{font-family:var(--font-mono);font-weight:700;font-size:22px;margin-top:4px;}
+  .split-bar{display:flex;height:10px;border-radius:99px;overflow:hidden;margin-top:14px;background:var(--surface-3);}
+  .split-seg.cash{background:var(--accent);}
+  .split-seg.mobile{background:var(--amber);}
+  .split-legend{display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:var(--ink-soft);}
+  .split-legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:6px;vertical-align:middle;}
+  .split-legend .lg-cash::before{background:var(--accent);}
+  .split-legend .lg-mobile::before{background:var(--amber);}
+
+  .rank-row{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;padding:7px 0;}
+  .rank-idx{color:var(--ink-faint);font-family:var(--font-mono);font-size:12.5px;}
+  .rank-name{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-bar-track{grid-column:1/-1;height:6px;background:var(--surface-3);border-radius:99px;overflow:hidden;margin-top:2px;}
+  .rank-bar-fill{height:100%;background:var(--accent);}
+  .rank-stats{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+  .rank-qty{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);text-align:right;white-space:nowrap;}
+  .rank-revenue{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--accent-strong);text-align:right;white-space:nowrap;}
+
+  .tx-row{display:grid;grid-template-columns:110px 1fr 90px 90px 34px;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);font-size:13px;}
+  .tx-row.head{color:var(--ink-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;}
+  .tx-row:last-child{border-bottom:none;}
+  .tx-time{font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);}
+  .tx-items{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-soft);}
+  .tx-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;text-align:center;width:fit-content;}
+  .tx-badge.cash{background:var(--accent-soft);color:var(--accent-strong);}
+  .tx-badge.mobile{background:var(--amber-soft);color:var(--amber);}
+  .tx-total{font-family:var(--font-mono);text-align:right;font-weight:600;}
+  .tx-delete{width:26px;height:26px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--ink-faint);cursor:pointer;}
+  .tx-delete:hover{color:var(--danger);background:var(--danger-soft);}
+  .table-scroll{overflow-x:auto;}
+  .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
+  .sess-tx-row:last-child{border-bottom:none;}
+  .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
+  .sess-tx-items{margin-top:3px;font-size:12.5px;color:var(--ink-soft);}
+  .export-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+  /* Settings */
+  .settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+  .hint{font-size:12.5px;color:var(--ink-faint);margin-top:6px;}
+  .file-btn-wrap{position:relative;overflow:hidden;display:inline-block;}
+  .file-btn-wrap input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .danger-zone{border-color:var(--danger-soft);}
+  .danger-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .danger-row:last-child{border-bottom:none;}
+  .danger-row-text strong{display:block;font-size:13.5px;}
+  .danger-row-text span{font-size:12px;color:var(--ink-faint);}
+
+  /* Modals */
+  .modal-overlay{position:fixed;inset:0;background:rgba(10,15,12,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
+  .modal{background:var(--surface);border-radius:var(--radius-l);width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;}
+  .modal-head h3{margin:0;font-family:var(--font-display);font-size:16.5px;}
+  .modal-close{border:none;background:transparent;font-size:18px;cursor:pointer;color:var(--ink-faint);width:28px;height:28px;border-radius:8px;}
+  .modal-close:hover{background:var(--surface-2);}
+  .modal-body{padding:4px 18px 18px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 18px;}
+
+  .fav-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);}
+  .fav-row:last-child{border-bottom:none;}
+  .fav-check{width:17px;height:17px;flex-shrink:0;}
+  .fav-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .fav-name{font-weight:500;font-size:13.5px;}
+  .fav-meta{font-size:11.5px;color:var(--ink-faint);}
+
+  .receipt-paper{font-family:var(--font-mono);font-size:13px;background:var(--surface-2);border-radius:var(--radius-m);padding:18px;}
+  .receipt-shop{font-family:var(--font-display);font-weight:600;font-size:15px;text-align:center;}
+  .receipt-meta{text-align:center;color:var(--ink-faint);font-size:11.5px;}
+  .receipt-rule{border:none;border-top:1px dashed var(--line-strong);margin:10px 0;}
+  .receipt-line{display:flex;justify-content:space-between;padding:3px 0;}
+  .receipt-qty{color:var(--ink-faint);}
+  .receipt-total{font-weight:700;font-size:14.5px;}
+  .receipt-thanks{text-align:center;margin-top:12px;color:var(--ink-soft);}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:200;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .gate-overlay{position:fixed;inset:0;background:var(--bg);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .gate-card{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
+  .gate-card h1{font-family:var(--font-display);font-size:22px;margin:0;}
+  .gate-sub{margin:0;color:var(--ink-soft);font-size:13.5px;line-height:1.6;}
+  .gate-card .field{width:100%;}
+  .gate-card input{font-size:16px;padding:11px 12px;}
+  .gate-msg{margin:0;color:var(--danger);font-size:13px;}
+  .gate-hint{margin:4px 0 0;color:var(--ink-faint);font-size:11.5px;line-height:1.6;}
+  .gate-section{display:flex;flex-direction:column;gap:10px;width:100%;}
+  .gate-booth-list{display:flex;flex-direction:column;gap:8px;width:100%;max-height:240px;overflow-y:auto;}
+  .gate-booth-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line-strong);background:var(--surface-2);border-radius:10px;cursor:pointer;text-align:left;width:100%;}
+  .gate-booth-item:hover{border-color:var(--accent);}
+  .gate-booth-name{font-weight:500;font-size:13.5px;}
+  .gate-booth-code{color:var(--ink-faint);font-size:11.5px;}
+
+  #printArea{display:none;}
+  @media print{
+    #app,.modal-overlay,.toast,.gate-overlay{display:none!important;}
+    #printArea{display:block!important;padding:20px;}
+  }
+
+  @media (max-width: 880px){
+    .brand-name{max-width:38vw;}
+    .checkout-layout{grid-template-columns:1fr;}
+    .cart-pane{position:fixed;left:10px;right:10px;bottom:10px;top:auto;max-height:82vh;transform:translateY(calc(100% - 58px));transition:transform .25s ease;z-index:50;}
+    .cart-pane.expanded{transform:translateY(0);}
+    .cart-summary-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;cursor:pointer;border-bottom:1px solid var(--line);}
+    .cart-summary-info{display:flex;flex-direction:column;}
+    #cartCountLabel{font-size:12px;color:var(--ink-faint);}
+    #cartTotalLabel{font-family:var(--font-mono);font-weight:700;font-size:16px;}
+    .cart-body{overflow-y:auto;}
+    .cart-backdrop{display:none;position:fixed;inset:0;background:rgba(10,15,12,.4);z-index:45;}
+    .cart-backdrop.show{display:block;}
+    .product-row{grid-template-columns:1fr;gap:6px;padding:12px 4px;}
+    .product-row.head{display:none;}
+    .stock-control{justify-content:flex-start;}
+    .tx-row{grid-template-columns:1fr auto;grid-template-areas:"time badge" "items items" "total del";row-gap:4px;}
+    .tx-row.head{display:none;}
+    .tx-time{grid-area:time;}
+    .tx-badge{grid-area:badge;justify-self:end;}
+    .tx-items{grid-area:items;white-space:normal;}
+    .tx-total{grid-area:total;text-align:left;}
+    .tx-delete{grid-area:del;justify-self:end;}
+  }
+</style>
+</head>
+<body>
+
+<div class="gate-overlay" id="boothGate">
+  <div class="gate-card">
+    <img class="gate-logo" src="assets/logo.png" alt="攤位收銀台" width="900" height="599" />
+    <h1>攤位收銀台</h1>
+    <p class="gate-sub">選擇已註冊的攤位，輸入密碼登入。相同攤位的裝置會共用同一份商品、庫存與銷售資料並即時同步。</p>
+
+    <div class="gate-section" id="gateListSection">
+      <div class="gate-booth-list" id="gateBoothList"></div>
+      <p class="hint" id="gateListEmpty" hidden>目前還沒有已註冊的攤位。</p>
+      <button class="btn btn-primary" id="gateShowRegisterBtn" style="width:100%;justify-content:center;">＋ 註冊新攤位</button>
+      <button class="btn btn-sm" id="gateShowManualBtn" style="width:100%;justify-content:center;">用代碼直接登入</button>
+    </div>
+
+    <div class="gate-section" id="gateRegisterSection" hidden>
+      <div class="field">
+        <label>攤位代碼</label>
+        <input id="gateRegCode" placeholder="例如：A01" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>攤位名稱</label>
+        <input id="gateRegName" placeholder="例如：手作甜點攤" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>設定密碼（至少 6 個字元）</label>
+        <input id="gateRegPassword" type="password" placeholder="設定這個攤位的密碼" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label>確認密碼</label>
+        <input id="gateRegPassword2" type="password" placeholder="再輸入一次密碼" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-primary" id="gateRegisterBtn" style="width:100%;justify-content:center;">建立攤位</button>
+      <button class="btn btn-sm" id="gateRegisterCancel" style="width:100%;justify-content:center;">‹ 返回清單</button>
+    </div>
+
+    <div class="gate-section" id="gateManualSection" hidden>
+      <div class="field">
+        <label>攤位代碼</label>
+        <input id="gateCodeInput" placeholder="例如：A01" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>密碼</label>
+        <input id="gateLoginPassword" type="password" placeholder="輸入攤位密碼" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" id="gateEnterBtn" style="width:100%;justify-content:center;">登入</button>
+      <button class="btn btn-sm" id="gateManualCancel" style="width:100%;justify-content:center;">‹ 返回清單</button>
+    </div>
+
+    <p class="gate-msg" id="gateMsg" hidden></p>
+    <p class="gate-hint" id="gateHintText">每個攤位都有自己的密碼保護，只有輸入正確密碼才能讀取或修改資料。</p>
+  </div>
+</div>
+
+<div class="gate-overlay" id="sessionGate" hidden>
+  <div class="gate-card">
+    <img class="gate-logo" src="assets/logo.png" alt="攤位收銀台" width="900" height="599" />
+    <h1>選擇今天的場次</h1>
+    <p class="gate-sub">上次使用的場次是 <strong id="lastSessionDateLabel"></strong>。開始新的一天，商品名稱與價格會自動沿用，但庫存會全部歸零，需要重新設定；也可以先看看之前的場次紀錄。</p>
+    <button class="btn btn-primary" id="startNewSessionBtn" style="width:100%;justify-content:center;">＋ 開始今天的新場次</button>
+    <button class="btn btn-sm" id="continueOldSessionBtn" style="width:100%;justify-content:center;">先不要，直接進入目前資料</button>
+    <div class="gate-section">
+      <p class="hint" style="margin:6px 0 0;">過去場次紀錄</p>
+      <div class="gate-booth-list" id="sessionList"></div>
+      <p class="hint" id="sessionListEmpty" hidden>目前沒有過去的場次紀錄。</p>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="攤位收銀台" width="900" height="599" />
+      <div class="brand-text">
+        <span class="brand-name" id="eventNameDisplay">攤位收銀台</span>
+        <span class="brand-sub"><span id="boothBadgeDisplay"></span><span id="clockDisplay">—</span></span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="checkout">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/><path d="M8 16h.01M12 16h4"/></svg>
+          收銀
+        </button>
+        <button class="tab-btn" data-tab="products">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.3 12.7 4.4a2 2 0 0 0-1.4-.6H5a2 2 0 0 0-2 2v6.3c0 .5.2 1 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l6.3-6.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none"/></svg>
+          商品
+        </button>
+        <button class="tab-btn" data-tab="reports">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+          報表
+        </button>
+        <button class="tab-btn" data-tab="settings">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M9 12h11M4 18h13M19 18h1"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+          設定
+        </button>
+      </nav>
+      <button class="logout-btn" id="topbarLogoutBtn" title="登出攤位">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        登出
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section id="tab-checkout" class="tab-panel active">
+      <div class="checkout-layout">
+        <div class="products-pane">
+          <div class="pane-head">
+            <input id="productSearch" class="search-input" placeholder="搜尋商品名稱或編號…" />
+            <span class="sample-badge" id="sampleBadge" hidden>範例商品，可於「商品」頁編輯</span>
+          </div>
+          <div id="productGrid" class="product-grid"></div>
+        </div>
+
+        <div class="cart-backdrop" id="cartBackdrop"></div>
+        <aside class="cart-pane" id="cartPane">
+          <div class="cart-summary-bar" id="cartSummaryBar">
+            <div class="cart-summary-info">
+              <span id="cartCountLabel">0 件</span>
+              <span id="cartTotalLabel" class="mono">NT$0</span>
+            </div>
+            <span id="cartToggleIcon">▲ 查看購物車</span>
+          </div>
+          <div class="cart-body">
+            <div class="cart-head">
+              <span>目前訂單</span>
+              <button class="btn btn-sm" id="preorderListBtn" type="button">預訂單<span class="badge-count" id="preorderBadge" hidden>0</span></button>
+            </div>
+            <div id="cartEmpty" class="cart-empty">尚未加入商品，點選左側商品加入</div>
+            <div id="cartItems" class="cart-items"></div>
+            <div class="pay-section" id="paySection" hidden>
+              <div class="pay-methods">
+                <button class="pay-method-btn active" data-method="cash">現金</button>
+                <button class="pay-method-btn" data-method="mobile">行動支付</button>
+              </div>
+              <div id="cashPad">
+                <div class="quick-cash" id="quickCash"></div>
+                <div class="cash-row">
+                  <label>收款金額</label>
+                  <input id="receivedInput" class="cash-input" type="number" inputmode="decimal" min="0" placeholder="0" />
+                </div>
+                <div class="cash-row change-row">
+                  <label>找零</label>
+                  <span id="changeLabel" class="mono change-value">NT$0</span>
+                </div>
+              </div>
+              <div class="cart-total-row">
+                <span>總計</span>
+                <span id="cartTotalBig" class="mono">NT$0</span>
+              </div>
+              <div class="cart-secondary-actions">
+                <button class="btn btn-sm btn-danger" id="cancelOrderBtn" type="button">取消訂單</button>
+                <button class="btn btn-sm" id="preorderBtn" type="button">＋ 存為預訂單</button>
+              </div>
+              <button id="checkoutBtn" class="checkout-btn" disabled>完成結帳</button>
+              <p id="checkoutMsg" class="checkout-msg" hidden></p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="tab-products" class="tab-panel">
+      <div class="card">
+        <div class="section-head">
+          <span class="section-title">商品管理</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" id="importFavoritesBtn">從常用商品匯入</button>
+            <button class="btn btn-primary" id="addProductBtn">＋ 新增商品</button>
+          </div>
+        </div>
+        <div id="productRows"></div>
+      </div>
+    </section>
+
+    <section id="tab-reports" class="tab-panel">
+      <div class="card">
+        <div class="section-head">
+          <span class="section-title">銷售報表</span>
+          <div class="scope-toggle">
+            <button class="scope-btn active" data-scope="today">今日</button>
+            <button class="scope-btn" data-scope="all">全部</button>
+          </div>
+        </div>
+        <div class="range-row">
+          <div class="field" style="min-width:150px;">
+            <label>起始日期</label>
+            <input type="date" id="rangeStartInput" />
+          </div>
+          <div class="field" style="min-width:150px;">
+            <label>結束日期</label>
+            <input type="date" id="rangeEndInput" />
+          </div>
+          <button class="btn btn-sm" id="rangeApplyBtn">套用區間</button>
+          <button class="btn btn-sm" id="rangeClearBtn" hidden>清除區間</button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="stat-tile-label">營收</div><div class="stat-tile-value mono" id="statRevenue">NT$0</div></div>
+          <div class="stat-tile"><div class="stat-tile-label">交易筆數</div><div class="stat-tile-value mono" id="statCount">0</div></div>
+          <div class="stat-tile"><div class="stat-tile-label">銷售總數量</div><div class="stat-tile-value mono" id="statQty">0</div></div>
+          <div class="stat-tile"><div class="stat-tile-label">客單價</div><div class="stat-tile-value mono" id="statAvg">NT$0</div></div>
+        </div>
+        <div class="split-bar" id="splitBar"><div class="split-seg cash" id="splitCash" style="width:50%"></div><div class="split-seg mobile" id="splitMobile" style="width:50%"></div></div>
+        <div class="split-legend">
+          <span class="lg-cash">現金 <span id="legendCash" class="mono">NT$0</span></span>
+          <span class="lg-mobile">行動支付 <span id="legendMobile" class="mono">NT$0</span></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><span class="section-title">熱銷商品</span></div>
+        <div id="rankList"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><span class="section-title">交易紀錄</span></div>
+        <div class="table-scroll">
+          <div class="tx-row head"><span>時間</span><span>商品明細</span><span>付款</span><span>總計</span><span></span></div>
+          <div id="txList"></div>
+        </div>
+        <div class="export-row">
+          <button class="btn btn-sm" id="printReportBtn">列印銷售總表</button>
+          <button class="btn btn-sm" id="exportTxBtn">匯出交易紀錄 (CSV)</button>
+          <button class="btn btn-sm" id="exportProductsBtn">匯出商品清單 (CSV)</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-panel">
+      <div class="settings-grid">
+        <div class="card">
+          <div class="section-title" style="margin-bottom:12px;">攤位帳號</div>
+          <p class="hint" style="margin-top:0;">目前登入代碼：<strong id="boothCodeDisplay" class="mono"></strong><br/>目前場次：<strong id="currentSessionDisplay" class="mono"></strong><br/>同步狀態：<span id="syncStatus">—</span></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm" id="settingsNewSessionBtn">＋ 開始新場次</button>
+            <button class="btn btn-sm" id="switchBoothBtn">切換 / 登出攤位</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title" style="margin-bottom:12px;">展場資訊</div>
+          <div class="field">
+            <label>展場 / 攤位名稱（顯示於收據）</label>
+            <input id="eventNameInput" />
+          </div>
+          <div class="field" style="margin-top:10px;max-width:140px;">
+            <label>幣別符號</label>
+            <input id="currencyInput" maxlength="4" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title" style="margin-bottom:12px;">資料備份</div>
+          <p class="hint" style="margin-top:0;">資料保存在雲端資料庫，建議定期匯出備份以防萬一。</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" id="exportBackupBtn">匯出全部資料 (JSON)</button>
+            <div class="file-btn-wrap">
+              <button class="btn">匯入備份檔案</button>
+              <input type="file" id="importFileInput" accept="application/json" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card danger-zone" style="grid-column:1/-1;">
+          <div class="section-title" style="margin-bottom:6px;">危險區域</div>
+          <div class="danger-row">
+            <div class="danger-row-text"><strong>清除銷售紀錄</strong><span>保留商品清單，僅刪除所有交易紀錄</span></div>
+            <button class="btn btn-danger btn-sm" id="clearSalesBtn">清除</button>
+          </div>
+          <div class="danger-row">
+            <div class="danger-row-text"><strong>重置所有資料</strong><span>清空商品、庫存與交易紀錄，恢復成初始範例，適合更換新展覽時使用</span></div>
+            <button class="btn btn-danger-solid btn-sm" id="resetAllBtn">重置</button>
+          </div>
+          <div class="danger-row">
+            <div class="danger-row-text"><strong>刪除整個攤位</strong><span>永久刪除這個攤位代碼與所有資料（商品、庫存、銷售紀錄、過去場次），無法復原</span></div>
+            <button class="btn btn-danger-solid btn-sm" id="deleteBoothBtn">刪除攤位</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-overlay" id="receiptModal" hidden>
+  <div class="modal receipt-modal">
+    <div class="modal-head"><h3>結帳完成</h3><button class="modal-close" id="receiptCloseX">✕</button></div>
+    <div class="modal-body"><div id="receiptContent"></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="receiptSaveTxt">儲存文字檔</button>
+      <button class="btn btn-sm" id="receiptPrint">列印</button>
+      <button class="btn btn-primary btn-sm" id="receiptClose">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="productModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3 id="productModalTitle">新增商品</h3><button class="modal-close" id="productModalCloseX">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field full"><label>商品名稱</label><input id="pfName" /></div>
+        <div class="field full">
+          <label>計價方式</label>
+          <div class="pay-methods">
+            <button type="button" class="ptype-btn active" data-ptype="unit">單價計件</button>
+            <button type="button" class="ptype-btn" data-ptype="weighed">秤重計價</button>
+          </div>
+        </div>
+        <div class="field" id="pfPriceField"><label>單價</label><input id="pfPrice" type="number" inputmode="decimal" min="0" /></div>
+        <div class="field" id="pfStockField"><label>初始庫存</label><input id="pfStock" type="number" inputmode="numeric" min="0" /></div>
+        <div class="field full" id="pfBundleToggleField">
+          <label class="checkbox-label"><input type="checkbox" id="pfBundleEnable" /> 多件特價（例如：3件100）</label>
+        </div>
+        <div class="field" id="pfBundleQtyField" hidden><label>特價件數</label><input id="pfBundleQty" type="number" inputmode="numeric" min="2" placeholder="例如：3" /></div>
+        <div class="field" id="pfBundlePriceField" hidden><label>特價金額</label><input id="pfBundlePrice" type="number" inputmode="decimal" min="0" placeholder="例如：100" /></div>
+        <div class="field full" id="pfWeighedHint" hidden><p class="hint" style="margin:0;">秤重商品不追蹤庫存，加入購物車後由現場人員輸入實際金額。</p></div>
+        <div class="field full"><label>編號 / SKU（選填）</label><input id="pfSku" /></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="productModalCancel">取消</button>
+      <button class="btn btn-primary btn-sm" id="productModalSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3 id="confirmTitle">確認</h3><button class="modal-close" id="confirmCloseX">✕</button></div>
+    <div class="modal-body"><p id="confirmMsg" style="margin:0;color:var(--ink-soft);"></p></div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="confirmCancel">取消</button>
+      <button class="btn btn-danger-solid btn-sm" id="confirmOk">確定</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="favoritesModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>常用商品匯入</h3><button class="modal-close" id="favoritesCloseX">✕</button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin:0 0 10px;">常用商品清單存在這台裝置上，登入不同攤位代碼時都能匯入使用。</p>
+      <div class="empty-state" id="favoritesEmpty" hidden>尚未建立常用商品。到商品清單，點商品旁的「☆ 常用」按鈕即可加入。</div>
+      <div id="favoritesList"></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn btn-sm" id="favoritesSelectAllBtn">全選 / 取消全選</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" id="favoritesCancelBtn">取消</button>
+        <button class="btn btn-primary btn-sm" id="favoritesImportBtn">匯入所選</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sessionViewModal" hidden>
+  <div class="modal receipt-modal">
+    <div class="modal-head"><h3 id="sessionViewTitle">場次報表</h3><button class="modal-close" id="sessionViewCloseX">✕</button></div>
+    <div class="modal-body" id="sessionViewBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="sessionViewClose">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="preorderModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>存為預訂單</h3><button class="modal-close" id="preorderModalCloseX">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field full"><label>客人姓名</label><input id="preorderName" placeholder="姓名或電話至少填一項" /></div>
+        <div class="field full"><label>電話（選填）</label><input id="preorderPhone" type="tel" inputmode="tel" /></div>
+      </div>
+      <p class="hint" style="margin-top:10px;">目前購物車（<span id="preorderSummaryText"></span>）會存成預訂單，庫存不會先扣除；等客人來取貨付款時，再從「預訂單」清單取單完成結帳。</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="preorderModalCancel">取消</button>
+      <button class="btn btn-primary btn-sm" id="preorderModalSave">儲存預訂單</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="preorderListModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>預訂單</h3><button class="modal-close" id="preorderListCloseX">✕</button></div>
+    <div class="modal-body">
+      <div class="empty-state" id="preorderListEmpty" hidden>目前沒有預訂單。</div>
+      <div id="preorderListBody"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="preorderListClose">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteBoothModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>刪除攤位</h3><button class="modal-close" id="deleteBoothCloseX">✕</button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin:0 0 12px;color:var(--danger);">此動作會永久刪除「<strong id="deleteBoothNameLabel"></strong>」（代碼 <strong id="deleteBoothCodeLabel" class="mono"></strong>）的所有商品、庫存、銷售紀錄與過去場次，且<strong>無法復原</strong>。</p>
+      <div class="field">
+        <label>請輸入通關密語以確認</label>
+        <input id="deleteBoothPassphrase" placeholder="輸入通關密語" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="deleteBoothCancel">取消</button>
+      <button class="btn btn-danger-solid btn-sm" id="deleteBoothConfirm">永久刪除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyDUc0jrAIiTptbON9zKuyIZtHi6qpI3rB8",
+    authDomain: "farmers-market-pos.firebaseapp.com",
+    projectId: "farmers-market-pos",
+    storageBucket: "farmers-market-pos.firebasestorage.app",
+    messagingSenderId: "1094037262037",
+    appId: "1:1094037262037:web:9301804ad1110e47931c5c"
+  };
+  var fbApp = null, auth = null, db = null, firebaseReady = false;
+  try{
+    fbApp = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    firebaseReady = true;
+  }catch(e){
+    firebaseReady = false;
+  }
+  var BOOTH_EMAIL_DOMAIN = "@booths.boothpos.local";
+  function boothEmail(code){ return code + BOOTH_EMAIL_DOMAIN; }
+  var DB_COLLECTION = "booths";
+  var INDEX_PATH = "booths_index/list";
+
+  function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+  function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+  function ceilTo(n,step){ return Math.ceil(n/step)*step; }
+
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+
+  function seedState(){
+    return {
+      version: 2,
+      eventName: "我的攤位",
+      currency: "NT$",
+      isSample: false,
+      sessionDate: todayStr(),
+      products: [
+        {id:genId(), name:"有機糙米1.5kg", price:200, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機白米1.5kg", price:240, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機糯米1.3kg", price:240, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機秈糙米1.5kg", price:240, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機紫米700g", price:300, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米麩200g", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玄米茶罐375g", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玄米茶包200g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機熟米糠150g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"蝦米菓", price:165, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米餅", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓(原味)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓(紫米)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玉米菓(原味)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓小包(黑糖)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓小包(可可)", price:165, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓小包(起司)", price:165, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機米菓(原味)罐", price:0, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(綜合)", price:0, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(紫米)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(蔥)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(咖啡)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(可可)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(芝麻)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"米蛋捲(海苔)", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"伯爵米蛋捲", price:0, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黃豆300g", price:125, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黃豆600g", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機茶豆300g", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黑豆300g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黑豆600g", price:300, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綠豆300g", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機紅豆300g", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機玉米粉", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機小米", price:220, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機洛神茶乾", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黃薑粉100g", price:350, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機仙草調理包", price:110, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機草莓乾", price:250, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機香蕉乾", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機嘉寶果乾", price:220, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機黑豆乾", price:220, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綜合荳", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綜合蔬菜乾", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"有機綜合水果乾", price:150, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"鳳梨乾(速)外", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"芒果乾(速)外", price:100, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"嘉寶果洛神Q乾", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"蘿蔔乾", price:40, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null},
+        {id:genId(), name:"嘉寶果濃縮汁", price:120, stock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null}
+      ],
+      sales: [],
+      preorders: []
+    };
+  }
+
+  function isValidState(s){ return !!s && Array.isArray(s.products) && Array.isArray(s.sales); }
+
+  function cloneState(s){ return JSON.parse(JSON.stringify(s)); }
+
+  var state = null;
+  var cart = []; // {id,name,price,qty}
+  var method = "cash";
+  var reportScope = "today";
+  var reportRangeStart = "";
+  var reportRangeEnd = "";
+  var cartExpanded = false;
+
+  var boothCode = null;
+  var boothDocRef = null;
+  var boothUnsub = null;
+  var cloudSyncTimer = null;
+  var gateIndexUnsub = null;
+
+  function saveState(){
+    if(!boothCode || !boothDocRef) return;
+    clearTimeout(cloudSyncTimer);
+    var refAtSchedule = boothDocRef, snapshotAtSchedule = state;
+    cloudSyncTimer = setTimeout(function(){
+      refAtSchedule.set(snapshotAtSchedule).catch(function(e){ toast("雲端同步失敗：" + (e&&e.message?e.message:"")); });
+    }, 400);
+  }
+
+  function markDirty(){ if(state.isSample){ state.isSample = false; } }
+
+  function fmt(n){
+    n = Number(n)||0;
+    var s = n.toLocaleString("en-US",{maximumFractionDigits:2});
+    return state.currency + s;
+  }
+
+  var toastTimer = null;
+  function toast(msg){
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 2200);
+  }
+
+  function mimeForFilename(filename){
+    if(/\.csv$/i.test(filename)) return "text/csv;charset=utf-8";
+    if(/\.json$/i.test(filename)) return "application/json;charset=utf-8";
+    return "text/plain;charset=utf-8";
+  }
+
+  function saveFile(filename, data){
+    try{
+      var blob = new Blob([data], {type: mimeForFilename(filename)});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+      toast("已下載「" + filename + "」");
+    }catch(e){
+      toast("下載失敗：" + (e && e.message ? e.message : "未知錯誤"));
+    }
+  }
+
+  /* ---------- Tabs ---------- */
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      if(btn.dataset.tab === "products") renderProducts();
+      if(btn.dataset.tab === "reports") renderReports();
+      if(btn.dataset.tab === "settings") renderSettings();
+    });
+  });
+
+  /* ---------- Clock ---------- */
+  function tickClock(){
+    var d = new Date();
+    document.getElementById("clockDisplay").textContent = d.toLocaleDateString("zh-TW",{month:"2-digit",day:"2-digit",weekday:"short"}) + " " + d.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+  }
+  tickClock(); setInterval(tickClock, 30000);
+
+  /* ---------- Checkout: products ---------- */
+  var productSearch = document.getElementById("productSearch");
+  productSearch.addEventListener("input", renderProductGrid);
+
+  function cartQtyOf(id){ var line = cart.find(function(c){return c.id===id;}); return line ? line.qty : 0; }
+
+  function renderProductGrid(){
+    var q = productSearch.value.trim().toLowerCase();
+    var grid = document.getElementById("productGrid");
+    var items = state.products.filter(function(p){
+      if(!q) return true;
+      return p.name.toLowerCase().indexOf(q)>-1 || (p.sku||"").toLowerCase().indexOf(q)>-1;
+    });
+    document.getElementById("sampleBadge").hidden = !state.isSample;
+    if(items.length===0){
+      grid.innerHTML = '<div class="empty-state">' + (state.products.length===0 ? "尚未建立商品，請至「商品」頁新增" : "找不到符合的商品") + "</div>";
+      return;
+    }
+    grid.innerHTML = items.map(function(p){
+      var isWeighed = p.pricingType === "weighed";
+      if(isWeighed){
+        return '<button class="product-card" data-id="' + p.id + '">' +
+          '<span class="pc-name">' + escapeHtml(p.name) + "</span>" +
+          (p.sku ? '<span class="pc-sku">' + escapeHtml(p.sku) + "</span>" : "") +
+          '<span class="pc-price mono">秤重計價</span>' +
+          '<span class="pc-stock">現場輸入金額</span>' +
+        "</button>";
+      }
+      var remain = p.stock - cartQtyOf(p.id);
+      var soldOut = remain <= 0;
+      var stockClass = soldOut ? "out" : (remain <= 5 ? "low" : "");
+      var stockLabel = soldOut ? "已售完" : ("庫存 " + remain);
+      var bundleBadge = (p.bundleQty && p.bundlePrice) ? ('<span class="pc-bundle">' + p.bundleQty + '件 ' + fmt(p.bundlePrice) + '</span>') : "";
+      return '<button class="product-card' + (soldOut?" sold-out":"") + '" data-id="' + p.id + '" ' + (soldOut?"disabled":"") + '>' +
+        '<span class="pc-name">' + escapeHtml(p.name) + "</span>" +
+        (p.sku ? '<span class="pc-sku">' + escapeHtml(p.sku) + "</span>" : "") +
+        '<span class="pc-price mono">' + fmt(p.price) + "</span>" + bundleBadge +
+        '<span class="pc-stock ' + stockClass + '">' + stockLabel + "</span>" +
+      "</button>";
+    }).join("");
+    grid.querySelectorAll(".product-card").forEach(function(card){
+      card.addEventListener("click", function(){ addToCart(card.dataset.id); });
+    });
+  }
+
+  function lineDefaultTotal(line){
+    if(line.pricingType === "weighed") return null;
+    var q = line.qty;
+    if(line.bundleQty && line.bundlePrice){
+      var bundles = Math.floor(q / line.bundleQty);
+      var rem = q % line.bundleQty;
+      return bundles*line.bundlePrice + rem*line.price;
+    }
+    return q*line.price;
+  }
+  function lineTotal(line){
+    if(line.amount!==null && line.amount!==undefined) return line.amount;
+    var d = lineDefaultTotal(line);
+    return d===null ? 0 : d;
+  }
+
+  function addToCart(id){
+    var p = state.products.find(function(x){return x.id===id;});
+    if(!p) return;
+    if(p.pricingType === "weighed"){
+      if(!cart.some(function(c){return c.id===id;})){
+        cart.push({id:p.id, name:p.name, price:0, qty:1, pricingType:"weighed", bundleQty:null, bundlePrice:null, amount:null});
+      }
+      renderCart(); renderProductGrid();
+      return;
+    }
+    var remain = p.stock - cartQtyOf(id);
+    if(remain<=0) return;
+    var line = cart.find(function(c){return c.id===id;});
+    if(line){ line.qty += 1; line.amount = null; }
+    else cart.push({id:p.id, name:p.name, price:p.price, qty:1, pricingType:"unit", bundleQty:p.bundleQty||null, bundlePrice:p.bundlePrice||null, amount:null});
+    renderCart(); renderProductGrid();
+  }
+
+  function setCartQty(id, qty){
+    var p = state.products.find(function(x){return x.id===id;});
+    var line = cart.find(function(c){return c.id===id;});
+    if(!line) return;
+    var max = p ? p.stock : line.qty;
+    qty = clamp(qty, 0, max);
+    if(qty<=0){ cart = cart.filter(function(c){return c.id!==id;}); }
+    else { line.qty = qty; line.amount = null; }
+    renderCart(); renderProductGrid();
+  }
+
+  function setCartAmount(id, value){
+    var line = cart.find(function(c){return c.id===id;});
+    if(!line) return;
+    if(value===""){ line.amount = null; }
+    else { line.amount = Math.max(0, Number(value)||0); }
+    renderCart();
+  }
+
+  function hasInvalidWeighedLine(){
+    return cart.some(function(c){ return c.pricingType==="weighed" && (!c.amount || c.amount<=0); });
+  }
+
+  function cartTotal(){ return cart.reduce(function(sum,c){return sum + lineTotal(c);},0); }
+  function cartCount(){ return cart.reduce(function(sum,c){return sum + c.qty;},0); }
+
+  var cartPane = document.getElementById("cartPane");
+  var cartBackdrop = document.getElementById("cartBackdrop");
+  document.getElementById("cartSummaryBar").addEventListener("click", function(){
+    cartExpanded = !cartExpanded;
+    cartPane.classList.toggle("expanded", cartExpanded);
+    cartBackdrop.classList.toggle("show", cartExpanded);
+    document.getElementById("cartToggleIcon").textContent = cartExpanded ? "▼ 收合" : "▲ 查看購物車";
+  });
+  cartBackdrop.addEventListener("click", function(){
+    cartExpanded = false;
+    cartPane.classList.remove("expanded");
+    cartBackdrop.classList.remove("show");
+    document.getElementById("cartToggleIcon").textContent = "▲ 查看購物車";
+  });
+
+  function renderCart(){
+    var itemsEl = document.getElementById("cartItems");
+    var empty = document.getElementById("cartEmpty");
+    var paySection = document.getElementById("paySection");
+    var count = cartCount(), total = cartTotal();
+
+    document.getElementById("cartCountLabel").textContent = count + " 件";
+    document.getElementById("cartTotalLabel").textContent = fmt(total);
+    document.getElementById("cartTotalBig").textContent = fmt(total);
+
+    if(cart.length===0){
+      itemsEl.innerHTML = "";
+      empty.hidden = false;
+      paySection.hidden = true;
+    } else {
+      empty.hidden = true;
+      paySection.hidden = false;
+      itemsEl.innerHTML = cart.map(function(c){
+        var isWeighed = c.pricingType === "weighed";
+        var qtyControls = isWeighed
+          ? '<span class="ci-weighed-tag">秤重</span>'
+          : ('<div class="ci-controls">' +
+              '<button class="qty-btn" data-act="dec">－</button>' +
+              '<span class="qty-value">' + c.qty + "</span>" +
+              '<button class="qty-btn" data-act="inc">＋</button>' +
+            "</div>");
+        var unitNote = isWeighed
+          ? "現場輸入金額"
+          : (fmt(c.price) + " / 件" + ((c.bundleQty && c.bundlePrice) ? ("・" + c.bundleQty + "件" + fmt(c.bundlePrice)) : ""));
+        var amountVal = isWeighed ? (c.amount==null ? "" : c.amount) : lineTotal(c);
+        return '<div class="cart-item' + (isWeighed?" is-weighed":"") + '" data-id="' + c.id + '">' +
+          '<div class="ci-info"><div class="ci-name">' + escapeHtml(c.name) + '</div><div class="ci-unit mono">' + unitNote + "</div></div>" +
+          qtyControls +
+          '<input class="ci-amount-input mono" data-act="amount" type="number" inputmode="decimal" min="0" placeholder="' + (isWeighed?"輸入金額":"") + '" value="' + amountVal + '" />' +
+          '<button class="ci-remove" data-act="rm">✕</button>' +
+        "</div>";
+      }).join("");
+      itemsEl.querySelectorAll(".cart-item").forEach(function(row){
+        var id = row.dataset.id;
+        var line = cart.find(function(c){return c.id===id;});
+        var incBtn = row.querySelector('[data-act="inc"]');
+        var decBtn = row.querySelector('[data-act="dec"]');
+        if(incBtn) incBtn.addEventListener("click", function(){ addToCart(id); });
+        if(decBtn) decBtn.addEventListener("click", function(){ setCartQty(id, line.qty-1); });
+        row.querySelector('[data-act="rm"]').addEventListener("click", function(){ setCartQty(id, 0); });
+        row.querySelector('[data-act="amount"]').addEventListener("change", function(e){ setCartAmount(id, e.target.value); });
+      });
+    }
+    renderQuickCash();
+    updateCheckoutState();
+  }
+
+  document.querySelectorAll("#paySection .pay-method-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      method = btn.dataset.method;
+      document.querySelectorAll("#paySection .pay-method-btn").forEach(function(b){b.classList.toggle("active", b===btn);});
+      document.getElementById("cashPad").hidden = method !== "cash";
+      updateCheckoutState();
+    });
+  });
+
+  function renderQuickCash(){
+    var total = cartTotal();
+    var box = document.getElementById("quickCash");
+    if(total<=0){ box.innerHTML=""; return; }
+    var candidates = [total, ceilTo(total,50), ceilTo(total,100), 500, 1000, 2000];
+    var uniq = Array.from(new Set(candidates)).filter(function(v){return v>=total;}).sort(function(a,b){return a-b;}).slice(0,4);
+    box.innerHTML = uniq.map(function(v){
+      return '<button class="quick-cash-btn" data-v="' + v + '">' + (v===total? "剛好 " : "") + fmt(v) + "</button>";
+    }).join("");
+    box.querySelectorAll(".quick-cash-btn").forEach(function(b){
+      b.addEventListener("click", function(){
+        document.getElementById("receivedInput").value = b.dataset.v;
+        updateCheckoutState();
+      });
+    });
+  }
+
+  document.getElementById("receivedInput").addEventListener("input", updateCheckoutState);
+
+  function updateCheckoutState(){
+    var total = cartTotal();
+    var btn = document.getElementById("checkoutBtn");
+    var msg = document.getElementById("checkoutMsg");
+    var changeLabel = document.getElementById("changeLabel");
+    var needsAmount = hasInvalidWeighedLine();
+    if(method === "cash"){
+      var received = Number(document.getElementById("receivedInput").value) || 0;
+      var change = received - total;
+      changeLabel.textContent = fmt(Math.max(change,0));
+      changeLabel.classList.toggle("insufficient", change<0);
+      if(cart.length===0){ btn.disabled = true; msg.hidden = true; }
+      else if(needsAmount){ btn.disabled = true; msg.hidden = false; msg.textContent = "請輸入秤重商品的金額"; }
+      else if(received < total){ btn.disabled = true; msg.hidden = false; msg.textContent = "收款金額不足"; }
+      else { btn.disabled = false; msg.hidden = true; }
+    } else {
+      changeLabel.textContent = fmt(0);
+      changeLabel.classList.remove("insufficient");
+      if(cart.length===0){ btn.disabled = true; msg.hidden = true; }
+      else if(needsAmount){ btn.disabled = true; msg.hidden = false; msg.textContent = "請輸入秤重商品的金額"; }
+      else { btn.disabled = false; msg.hidden = true; }
+    }
+  }
+
+  document.getElementById("checkoutBtn").addEventListener("click", function(){
+    if(cart.length===0 || hasInvalidWeighedLine()) return;
+    var total = cartTotal();
+    var received = total, change = 0;
+    if(method==="cash"){
+      received = Number(document.getElementById("receivedInput").value)||0;
+      if(received<total) return;
+      change = received-total;
+    }
+    var sale = {
+      id: genId(),
+      ts: new Date().toISOString(),
+      items: cart.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty,pricingType:c.pricingType,amount:lineTotal(c)};}),
+      total: total, method: method, received: received, change: change
+    };
+    cart.forEach(function(c){
+      var p = state.products.find(function(x){return x.id===c.id;});
+      if(p && c.pricingType!=="weighed") p.stock = Math.max(0, p.stock - c.qty);
+    });
+    state.sales.push(sale);
+    saveState();
+    cart = [];
+    document.getElementById("receivedInput").value = "";
+    cartExpanded = false;
+    cartPane.classList.remove("expanded");
+    cartBackdrop.classList.remove("show");
+    document.getElementById("cartToggleIcon").textContent = "▲ 查看購物車";
+    renderCart(); renderProductGrid();
+    openReceiptModal(sale);
+  });
+
+  /* ---------- Cancel order / Pre-orders ---------- */
+  function clearCartUI(){
+    cart = [];
+    document.getElementById("receivedInput").value = "";
+    cartExpanded = false;
+    cartPane.classList.remove("expanded");
+    cartBackdrop.classList.remove("show");
+    document.getElementById("cartToggleIcon").textContent = "▲ 查看購物車";
+    renderCart();
+  }
+
+  document.getElementById("cancelOrderBtn").addEventListener("click", function(){
+    if(cart.length===0) return;
+    confirmAction("取消訂單", "確定要清空目前購物車嗎？已選的商品都會移除。", function(){
+      clearCartUI();
+      toast("已取消訂單");
+    });
+  });
+
+  function cartItemsSummaryText(){
+    return cart.map(function(c){ return c.name + "×" + c.qty; }).join("、");
+  }
+
+  document.getElementById("preorderBtn").addEventListener("click", function(){
+    if(cart.length===0) return;
+    if(hasInvalidWeighedLine()){ toast("請先輸入秤重商品的金額"); return; }
+    document.getElementById("preorderName").value = "";
+    document.getElementById("preorderPhone").value = "";
+    document.getElementById("preorderSummaryText").textContent = cartItemsSummaryText() + "・" + fmt(cartTotal());
+    document.getElementById("preorderModal").hidden = false;
+  });
+  function closePreorderModal(){ document.getElementById("preorderModal").hidden = true; }
+  document.getElementById("preorderModalCloseX").addEventListener("click", closePreorderModal);
+  document.getElementById("preorderModalCancel").addEventListener("click", closePreorderModal);
+  document.getElementById("preorderModalSave").addEventListener("click", function(){
+    var name = document.getElementById("preorderName").value.trim();
+    var phone = document.getElementById("preorderPhone").value.trim();
+    if(!name && !phone){ toast("請至少輸入姓名或電話"); return; }
+    if(!state.preorders) state.preorders = [];
+    state.preorders.push({
+      id: genId(),
+      ts: new Date().toISOString(),
+      customerName: name,
+      customerPhone: phone,
+      items: cloneState(cart),
+      total: cartTotal()
+    });
+    saveState();
+    clearCartUI();
+    updatePreorderBadge();
+    closePreorderModal();
+    toast("已存為預訂單");
+  });
+
+  function updatePreorderBadge(){
+    var n = (state.preorders||[]).length;
+    var badge = document.getElementById("preorderBadge");
+    badge.textContent = n;
+    badge.hidden = n===0;
+  }
+
+  document.getElementById("preorderListBtn").addEventListener("click", function(){
+    renderPreorderList();
+    document.getElementById("preorderListModal").hidden = false;
+  });
+  function closePreorderListModal(){ document.getElementById("preorderListModal").hidden = true; }
+  document.getElementById("preorderListCloseX").addEventListener("click", closePreorderListModal);
+  document.getElementById("preorderListClose").addEventListener("click", closePreorderListModal);
+
+  function renderPreorderList(){
+    var list = state.preorders || [];
+    var wrap = document.getElementById("preorderListBody");
+    var empty = document.getElementById("preorderListEmpty");
+    if(list.length===0){ wrap.innerHTML = ""; empty.hidden = false; return; }
+    empty.hidden = true;
+    var sorted = list.slice().sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); });
+    wrap.innerHTML = sorted.map(function(o){
+      var itemsSummary = o.items.map(function(it){ return it.name + "×" + it.qty; }).join("、");
+      var timeLabel = new Date(o.ts).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+      var who = [o.customerName, o.customerPhone].filter(Boolean).join(" ・ ") || "（未填資料）";
+      return '<div class="preorder-row" data-id="' + o.id + '">' +
+        '<div class="preorder-top"><span class="preorder-customer">' + escapeHtml(who) + '</span><span class="mono">' + fmt(o.total) + '</span></div>' +
+        '<div class="preorder-meta">' + timeLabel + '</div>' +
+        '<div class="preorder-items">' + escapeHtml(itemsSummary) + '</div>' +
+        '<div class="preorder-actions"><button class="btn btn-sm btn-primary" data-act="fulfill">取單結帳</button><button class="btn btn-sm btn-danger" data-act="remove">刪除</button></div>' +
+      '</div>';
+    }).join("");
+    wrap.querySelectorAll(".preorder-row").forEach(function(row){
+      var id = row.dataset.id;
+      row.querySelector('[data-act="fulfill"]').addEventListener("click", function(){ fulfillPreorder(id); });
+      row.querySelector('[data-act="remove"]').addEventListener("click", function(){
+        confirmAction("刪除預訂單", "確定要刪除這筆預訂單嗎？此動作無法復原。", function(){
+          state.preorders = (state.preorders||[]).filter(function(o){ return o.id !== id; });
+          saveState(); renderPreorderList(); updatePreorderBadge();
+          toast("已刪除預訂單");
+        });
+      });
+    });
+  }
+
+  function fulfillPreorder(id){
+    var order = (state.preorders||[]).find(function(o){ return o.id === id; });
+    if(!order) return;
+    if(cart.length>0){
+      confirmAction("取單結帳", "目前購物車還有其他商品，取單會直接替換成這張預訂單的內容，確定嗎？", function(){ doFulfillPreorder(order); });
+    } else {
+      doFulfillPreorder(order);
+    }
+  }
+  function doFulfillPreorder(order){
+    var clamped = [];
+    var reduced = false;
+    order.items.forEach(function(line){
+      var p = state.products.find(function(x){ return x.id === line.id; });
+      if(!p){ reduced = true; return; }
+      if(line.pricingType === "weighed"){
+        clamped.push({id:p.id, name:p.name, price:0, qty:1, pricingType:"weighed", bundleQty:null, bundlePrice:null, amount:line.amount});
+        return;
+      }
+      var qty = Math.min(line.qty, p.stock);
+      if(qty <= 0){ reduced = true; return; }
+      if(qty < line.qty) reduced = true;
+      clamped.push({id:p.id, name:p.name, price:p.price, qty:qty, pricingType:"unit", bundleQty:p.bundleQty||null, bundlePrice:p.bundlePrice||null, amount:null});
+    });
+    cart = clamped;
+    state.preorders = (state.preorders||[]).filter(function(o){ return o.id !== order.id; });
+    saveState();
+    renderCart(); renderProductGrid(); updatePreorderBadge();
+    closePreorderListModal();
+    toast(reduced ? "已取單，但部分商品庫存不足，數量已自動調整，請確認購物車" : "已取單，請確認金額後結帳");
+  }
+
+  /* ---------- Receipt ---------- */
+  function receiptHTML(sale){
+    var itemsHtml = sale.items.map(function(it){
+      var qtyLabel = it.pricingType==="weighed" ? "" : (' <span class="receipt-qty">×' + it.qty + '</span>');
+      return '<div class="receipt-line"><span>' + escapeHtml(it.name) + qtyLabel + '</span><span class="mono">' + fmt(it.amount) + "</span></div>";
+    }).join("");
+    var payHtml = sale.method==="cash"
+      ? '<div class="receipt-line"><span>收現</span><span class="mono">' + fmt(sale.received) + '</span></div><div class="receipt-line"><span>找零</span><span class="mono">' + fmt(sale.change) + "</span></div>"
+      : '<div class="receipt-line"><span>付款方式</span><span>行動支付</span></div>';
+    return '<div class="receipt-paper">' +
+      '<div class="receipt-shop">' + escapeHtml(state.eventName||"展場攤位") + "</div>" +
+      '<div class="receipt-meta">' + new Date(sale.ts).toLocaleString("zh-TW") + "</div>" +
+      '<div class="receipt-meta">單號 ' + sale.id.slice(-8).toUpperCase() + "</div>" +
+      '<hr class="receipt-rule"/>' + itemsHtml + '<hr class="receipt-rule"/>' +
+      '<div class="receipt-line receipt-total"><span>總計</span><span class="mono">' + fmt(sale.total) + "</span></div>" +
+      payHtml +
+      '<div class="receipt-thanks">謝謝惠顧！</div>' +
+    "</div>";
+  }
+
+  function receiptText(sale){
+    var lines = [];
+    lines.push(state.eventName || "展場攤位");
+    lines.push(new Date(sale.ts).toLocaleString("zh-TW"));
+    lines.push("--------------------------------");
+    sale.items.forEach(function(it){
+      var label = it.pricingType==="weighed" ? it.name : (it.name + " x" + it.qty);
+      lines.push(label + "   " + fmt(it.amount));
+    });
+    lines.push("--------------------------------");
+    lines.push("總計 " + fmt(sale.total));
+    if(sale.method==="cash"){
+      lines.push("收現 " + fmt(sale.received));
+      lines.push("找零 " + fmt(sale.change));
+    } else {
+      lines.push("付款方式：行動支付");
+    }
+    lines.push("");
+    lines.push("謝謝惠顧！");
+    return lines.join("\n");
+  }
+
+  var currentReceiptSale = null;
+  function openReceiptModal(sale){
+    currentReceiptSale = sale;
+    document.getElementById("receiptContent").innerHTML = receiptHTML(sale);
+    document.getElementById("receiptModal").hidden = false;
+  }
+  function closeReceiptModal(){ document.getElementById("receiptModal").hidden = true; }
+  document.getElementById("receiptClose").addEventListener("click", closeReceiptModal);
+  document.getElementById("receiptCloseX").addEventListener("click", closeReceiptModal);
+  document.getElementById("receiptPrint").addEventListener("click", function(){
+    if(!currentReceiptSale) return;
+    document.getElementById("printArea").innerHTML = receiptHTML(currentReceiptSale);
+    window.print();
+  });
+  document.getElementById("receiptSaveTxt").addEventListener("click", function(){
+    if(!currentReceiptSale) return;
+    var fname = "收據-" + currentReceiptSale.id.slice(-8) + ".txt";
+    saveFile(fname, receiptText(currentReceiptSale));
+  });
+  window.addEventListener("afterprint", function(){ document.getElementById("printArea").innerHTML=""; });
+
+  /* ---------- Products tab ---------- */
+  function renderProducts(){
+    var wrap = document.getElementById("productRows");
+    if(state.products.length===0){
+      wrap.innerHTML = '<div class="empty-state">尚未建立商品，點右上角「新增商品」開始建立你的展場商品清單</div>';
+      return;
+    }
+    var favNames = loadFavorites().map(function(f){ return f.name; });
+    wrap.innerHTML = '<div class="product-row head"><span>商品名稱</span><span>單價</span><span>庫存</span><span></span></div>' +
+      state.products.map(function(p){
+        var isWeighed = p.pricingType === "weighed";
+        var bundleNote = (!isWeighed && p.bundleQty && p.bundlePrice) ? ('<span class="pr-bundle-note">' + p.bundleQty + '件 ' + fmt(p.bundlePrice) + '</span>') : "";
+        var priceCell = isWeighed
+          ? '<div class="pr-weighed-note">秤重計價</div>'
+          : '<input class="pr-price-input mono" data-f="price" type="number" inputmode="decimal" min="0" value="' + p.price + '" />';
+        var stockCell = isWeighed
+          ? '<div class="pr-weighed-note">不追蹤庫存</div>'
+          : ('<div class="stock-control">' +
+              '<button class="qty-btn" data-act="stock-dec">－</button>' +
+              '<input class="stock-input mono" data-f="stock" type="number" inputmode="numeric" min="0" value="' + p.stock + '" />' +
+              '<button class="qty-btn" data-act="stock-inc">＋</button>' +
+            '</div>');
+        var isFav = favNames.indexOf(p.name) > -1;
+        var favBtn = '<button class="btn btn-sm fav-btn' + (isFav ? " active" : "") + '" data-act="fav" title="' + (isFav?"取消常用":"加入常用商品") + '">' + (isFav ? "★ 常用" : "☆ 常用") + '</button>';
+        return '<div class="product-row" data-id="' + p.id + '">' +
+          '<div class="pr-name-wrap"><input class="pr-name-input" data-f="name" value="' + escapeHtml(p.name) + '" />' + (p.sku?'<span class="pr-sku">'+escapeHtml(p.sku)+'</span>':'') + bundleNote + '</div>' +
+          priceCell + stockCell +
+          '<div class="product-actions">' + favBtn + '<button class="btn btn-sm" data-act="edit">編輯</button><button class="btn btn-sm btn-danger" data-act="delete">刪除</button></div>' +
+        '</div>';
+      }).join("");
+
+    wrap.querySelectorAll(".product-row[data-id]").forEach(function(row){
+      var id = row.dataset.id;
+      var p = state.products.find(function(x){return x.id===id;});
+      var nameInput = row.querySelector('[data-f="name"]');
+      if(nameInput) nameInput.addEventListener("change", function(e){ p.name = e.target.value.trim() || p.name; markDirty(); saveState(); renderProductGrid(); });
+      var priceInput = row.querySelector('[data-f="price"]');
+      if(priceInput) priceInput.addEventListener("change", function(e){ p.price = Math.max(0, Number(e.target.value)||0); markDirty(); saveState(); renderProductGrid(); });
+      var stockInput = row.querySelector('[data-f="stock"]');
+      if(stockInput) stockInput.addEventListener("change", function(e){ p.stock = Math.max(0, Math.floor(Number(e.target.value)||0)); markDirty(); saveState(); renderProductGrid(); });
+      var stockIncBtn = row.querySelector('[data-act="stock-inc"]');
+      if(stockIncBtn) stockIncBtn.addEventListener("click", function(){ p.stock += 1; markDirty(); saveState(); renderProducts(); renderProductGrid(); });
+      var stockDecBtn = row.querySelector('[data-act="stock-dec"]');
+      if(stockDecBtn) stockDecBtn.addEventListener("click", function(){ p.stock = Math.max(0,p.stock-1); markDirty(); saveState(); renderProducts(); renderProductGrid(); });
+      row.querySelector('[data-act="fav"]').addEventListener("click", function(){ toggleFavorite(p); });
+      row.querySelector('[data-act="edit"]').addEventListener("click", function(){ openProductModal(p); });
+      row.querySelector('[data-act="delete"]').addEventListener("click", function(){
+        confirmAction("刪除商品", '確定要刪除「' + escapeHtml(p.name) + '」嗎？已完成的交易紀錄不受影響。', function(){
+          state.products = state.products.filter(function(x){return x.id!==id;});
+          cart = cart.filter(function(c){return c.id!==id;});
+          markDirty(); saveState(); renderProducts(); renderProductGrid(); renderCart();
+        });
+      });
+    });
+  }
+
+  var editingProductId = null;
+  var pfPricingType = "unit";
+
+  function setPfPricingType(t){
+    pfPricingType = t;
+    document.querySelectorAll("#productModal .ptype-btn").forEach(function(b){ b.classList.toggle("active", b.dataset.ptype===t); });
+    var isWeighed = t === "weighed";
+    document.getElementById("pfPriceField").hidden = isWeighed;
+    document.getElementById("pfStockField").hidden = isWeighed;
+    document.getElementById("pfBundleToggleField").hidden = isWeighed;
+    document.getElementById("pfWeighedHint").hidden = !isWeighed;
+    if(isWeighed){
+      document.getElementById("pfBundleQtyField").hidden = true;
+      document.getElementById("pfBundlePriceField").hidden = true;
+    } else {
+      updateBundleFieldsVisibility();
+    }
+  }
+  function updateBundleFieldsVisibility(){
+    var on = document.getElementById("pfBundleEnable").checked;
+    document.getElementById("pfBundleQtyField").hidden = !on;
+    document.getElementById("pfBundlePriceField").hidden = !on;
+  }
+  document.querySelectorAll("#productModal .ptype-btn").forEach(function(b){
+    b.addEventListener("click", function(){ setPfPricingType(b.dataset.ptype); });
+  });
+  document.getElementById("pfBundleEnable").addEventListener("change", updateBundleFieldsVisibility);
+
+  function openProductModal(product){
+    editingProductId = product ? product.id : null;
+    document.getElementById("productModalTitle").textContent = product ? "編輯商品" : "新增商品";
+    document.getElementById("pfName").value = product ? product.name : "";
+    document.getElementById("pfSku").value = product ? (product.sku||"") : "";
+    document.getElementById("pfPrice").value = product ? product.price : "";
+    document.getElementById("pfStock").value = product ? product.stock : "";
+    var hasBundle = !!(product && product.bundleQty && product.bundlePrice);
+    document.getElementById("pfBundleEnable").checked = hasBundle;
+    document.getElementById("pfBundleQty").value = hasBundle ? product.bundleQty : "";
+    document.getElementById("pfBundlePrice").value = hasBundle ? product.bundlePrice : "";
+    setPfPricingType(product ? (product.pricingType||"unit") : "unit");
+    document.getElementById("productModal").hidden = false;
+    document.getElementById("pfName").focus();
+  }
+  document.getElementById("addProductBtn").addEventListener("click", function(){ openProductModal(null); });
+  function closeProductModal(){ document.getElementById("productModal").hidden = true; }
+  document.getElementById("productModalCloseX").addEventListener("click", closeProductModal);
+  document.getElementById("productModalCancel").addEventListener("click", closeProductModal);
+  document.getElementById("productModalSave").addEventListener("click", function(){
+    var name = document.getElementById("pfName").value.trim();
+    if(!name){ toast("請輸入商品名稱"); return; }
+    var sku = document.getElementById("pfSku").value.trim();
+    var patch;
+    if(pfPricingType === "weighed"){
+      patch = { pricingType:"weighed", price:0, stock:0, bundleQty:null, bundlePrice:null };
+    } else {
+      var price = Math.max(0, Number(document.getElementById("pfPrice").value)||0);
+      var stock = Math.max(0, Math.floor(Number(document.getElementById("pfStock").value)||0));
+      var bundleOn = document.getElementById("pfBundleEnable").checked;
+      var bundleQty = bundleOn ? Math.max(2, Math.floor(Number(document.getElementById("pfBundleQty").value)||0)) : null;
+      var bundlePrice = bundleOn ? Math.max(0, Number(document.getElementById("pfBundlePrice").value)||0) : null;
+      if(bundleOn && (!bundleQty || !bundlePrice)){ toast("請完整輸入多件特價的件數與金額"); return; }
+      patch = { pricingType:"unit", price:price, stock:stock, bundleQty:bundleQty, bundlePrice:bundlePrice };
+    }
+    patch.name = name;
+    patch.sku = sku;
+    if(editingProductId){
+      var existing = state.products.find(function(x){return x.id===editingProductId;});
+      if(existing) Object.assign(existing, patch);
+    } else {
+      patch.id = genId();
+      state.products.push(patch);
+    }
+    markDirty(); saveState(); renderProducts(); renderProductGrid(); renderCart();
+    closeProductModal();
+    toast(editingProductId ? "已更新商品" : "已新增商品");
+  });
+
+  /* ---------- Favorite products (device-local, reusable across booths) ---------- */
+  var FAV_KEY = "expoPosFavoriteProducts_v1";
+  function loadFavorites(){
+    try{
+      var raw = localStorage.getItem(FAV_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function saveFavorites(list){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }catch(e){} }
+
+  function toggleFavorite(p){
+    var list = loadFavorites();
+    var idx = list.findIndex(function(f){ return f.name === p.name; });
+    if(idx>-1){
+      list.splice(idx,1);
+      toast("已從常用商品移除「" + p.name + "」");
+    } else {
+      list.push({
+        name: p.name, sku: p.sku||"", pricingType: p.pricingType||"unit",
+        price: p.price||0, stock: p.stock||0,
+        bundleQty: p.bundleQty||null, bundlePrice: p.bundlePrice||null
+      });
+      toast("已加入常用商品「" + p.name + "」");
+    }
+    saveFavorites(list);
+    renderProducts();
+  }
+
+  function renderFavoritesModal(){
+    var list = loadFavorites();
+    var wrap = document.getElementById("favoritesList");
+    var empty = document.getElementById("favoritesEmpty");
+    if(list.length===0){ wrap.innerHTML = ""; empty.hidden = false; return; }
+    empty.hidden = true;
+    wrap.innerHTML = list.map(function(f, i){
+      var meta = f.pricingType === "weighed" ? "秤重計價" : (fmt(f.price) + ((f.bundleQty && f.bundlePrice) ? ("・" + f.bundleQty + "件" + fmt(f.bundlePrice)) : ""));
+      return '<div class="fav-row" data-idx="' + i + '">' +
+        '<input type="checkbox" class="fav-check" checked />' +
+        '<div class="fav-info"><div class="fav-name">' + escapeHtml(f.name) + '</div><div class="fav-meta mono">' + meta + (f.sku ? (" · " + escapeHtml(f.sku)) : "") + '</div></div>' +
+        '<button class="tx-delete" data-act="remove" title="從常用商品移除">✕</button>' +
+      '</div>';
+    }).join("");
+    wrap.querySelectorAll(".fav-row").forEach(function(row){
+      var idx = Number(row.dataset.idx);
+      row.querySelector('[data-act="remove"]').addEventListener("click", function(){
+        var list2 = loadFavorites();
+        list2.splice(idx, 1);
+        saveFavorites(list2);
+        renderFavoritesModal();
+      });
+    });
+  }
+
+  document.getElementById("importFavoritesBtn").addEventListener("click", function(){
+    renderFavoritesModal();
+    document.getElementById("favoritesModal").hidden = false;
+  });
+  function closeFavoritesModal(){ document.getElementById("favoritesModal").hidden = true; }
+  document.getElementById("favoritesCloseX").addEventListener("click", closeFavoritesModal);
+  document.getElementById("favoritesCancelBtn").addEventListener("click", closeFavoritesModal);
+  document.getElementById("favoritesSelectAllBtn").addEventListener("click", function(){
+    var checks = document.querySelectorAll("#favoritesList .fav-check");
+    var allChecked = Array.prototype.every.call(checks, function(c){ return c.checked; });
+    checks.forEach(function(c){ c.checked = !allChecked; });
+  });
+  document.getElementById("favoritesImportBtn").addEventListener("click", function(){
+    var list = loadFavorites();
+    var rows = document.querySelectorAll("#favoritesList .fav-row");
+    var toImport = [];
+    rows.forEach(function(row){
+      var idx = Number(row.dataset.idx);
+      if(row.querySelector(".fav-check").checked && list[idx]) toImport.push(list[idx]);
+    });
+    if(toImport.length===0){ toast("請至少選擇一項"); return; }
+    var existingNames = state.products.map(function(p){ return p.name; });
+    var added = 0, skipped = 0;
+    toImport.forEach(function(f){
+      if(existingNames.indexOf(f.name) > -1){ skipped++; return; }
+      state.products.push({
+        id: genId(), name: f.name, sku: f.sku||"",
+        pricingType: f.pricingType||"unit",
+        price: f.price||0, stock: f.stock||0,
+        bundleQty: f.bundleQty||null, bundlePrice: f.bundlePrice||null
+      });
+      existingNames.push(f.name);
+      added++;
+    });
+    markDirty(); saveState(); renderProducts(); renderProductGrid();
+    closeFavoritesModal();
+    toast(added + " 項已匯入" + (skipped ? ("，" + skipped + " 項因名稱重複略過") : ""));
+  });
+
+  /* ---------- Reports ---------- */
+  document.querySelectorAll(".scope-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      reportScope = btn.dataset.scope;
+      reportRangeStart = ""; reportRangeEnd = "";
+      document.getElementById("rangeStartInput").value = "";
+      document.getElementById("rangeEndInput").value = "";
+      document.getElementById("rangeClearBtn").hidden = true;
+      document.querySelectorAll(".scope-btn").forEach(function(b){b.classList.toggle("active", b===btn);});
+      renderReports();
+    });
+  });
+  document.getElementById("rangeApplyBtn").addEventListener("click", function(){
+    var start = document.getElementById("rangeStartInput").value;
+    var end = document.getElementById("rangeEndInput").value;
+    if(!start && !end){ toast("請至少選擇一個日期"); return; }
+    if(start && end && start > end){ toast("起始日期不能晚於結束日期"); return; }
+    reportRangeStart = start; reportRangeEnd = end;
+    reportScope = "custom";
+    document.querySelectorAll(".scope-btn").forEach(function(b){ b.classList.remove("active"); });
+    document.getElementById("rangeClearBtn").hidden = false;
+    renderReports();
+  });
+  document.getElementById("rangeClearBtn").addEventListener("click", function(){
+    reportScope = "today";
+    reportRangeStart = ""; reportRangeEnd = "";
+    document.getElementById("rangeStartInput").value = "";
+    document.getElementById("rangeEndInput").value = "";
+    document.getElementById("rangeClearBtn").hidden = true;
+    document.querySelectorAll(".scope-btn").forEach(function(b){ b.classList.toggle("active", b.dataset.scope==="today"); });
+    renderReports();
+  });
+
+  function isToday(ts){ var d=new Date(ts), n=new Date(); return d.toDateString()===n.toDateString(); }
+
+  function scopedSales(){
+    if(reportScope === "custom"){
+      var startMs = reportRangeStart ? new Date(reportRangeStart + "T00:00:00").getTime() : -Infinity;
+      var endMs = reportRangeEnd ? new Date(reportRangeEnd + "T23:59:59.999").getTime() : Infinity;
+      return state.sales.filter(function(s){ var t = new Date(s.ts).getTime(); return t>=startMs && t<=endMs; });
+    }
+    return reportScope==="today" ? state.sales.filter(function(s){return isToday(s.ts);}) : state.sales.slice();
+  }
+
+  function scopeLabel(){
+    if(reportScope==="today") return "今日";
+    if(reportScope==="custom"){
+      if(reportRangeStart && reportRangeEnd) return reportRangeStart===reportRangeEnd ? reportRangeStart : (reportRangeStart + " ~ " + reportRangeEnd);
+      if(reportRangeStart) return reportRangeStart + " 起";
+      if(reportRangeEnd) return reportRangeEnd + " 以前";
+    }
+    return "全部";
+  }
+
+  function totalQty(sales){
+    return sales.reduce(function(s,x){ return s + x.items.reduce(function(a,it){return a+it.qty;},0); },0);
+  }
+
+  function buildQtyMap(sales){
+    var qtyMap = {};
+    sales.forEach(function(s){
+      s.items.forEach(function(it){
+        qtyMap[it.name] = qtyMap[it.name] || {qty:0, revenue:0};
+        qtyMap[it.name].qty += it.qty;
+        qtyMap[it.name].revenue += (it.amount==null ? it.price*it.qty : it.amount);
+      });
+    });
+    return qtyMap;
+  }
+
+  function itemsSummaryOf(items){
+    return items.map(function(it){
+      return it.pricingType==="weighed" ? (it.name + "(" + fmt(it.amount) + ")") : (it.name+"×"+it.qty);
+    }).join("、");
+  }
+
+  function renderReports(){
+    var sales = scopedSales();
+    var revenue = sales.reduce(function(s,x){return s+x.total;},0);
+    var count = sales.length;
+    var avg = count ? revenue/count : 0;
+    document.getElementById("statRevenue").textContent = fmt(revenue);
+    document.getElementById("statCount").textContent = count;
+    document.getElementById("statQty").textContent = totalQty(sales);
+    document.getElementById("statAvg").textContent = fmt(avg);
+
+    var cashTotal = sales.filter(function(s){return s.method==="cash";}).reduce(function(s,x){return s+x.total;},0);
+    var mobileTotal = sales.filter(function(s){return s.method==="mobile";}).reduce(function(s,x){return s+x.total;},0);
+    var sumCM = cashTotal+mobileTotal;
+    document.getElementById("splitCash").style.width = (sumCM? (cashTotal/sumCM*100):50) + "%";
+    document.getElementById("splitMobile").style.width = (sumCM? (mobileTotal/sumCM*100):50) + "%";
+    document.getElementById("legendCash").textContent = fmt(cashTotal);
+    document.getElementById("legendMobile").textContent = fmt(mobileTotal);
+
+    var qtyMap = buildQtyMap(sales);
+    var ranked = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
+      .sort(function(a,b){return b.qty-a.qty;}).slice(0,5);
+    var maxQty = ranked.length? ranked[0].qty : 1;
+    var rankList = document.getElementById("rankList");
+    rankList.innerHTML = ranked.length===0 ? '<div class="empty-state">' + scopeLabel() + '尚無銷售紀錄</div>' :
+      ranked.map(function(r,i){
+        return '<div class="rank-row">' +
+          '<span class="rank-idx">' + (i+1) + '</span>' +
+          '<span class="rank-name">' + escapeHtml(r.name) + '</span>' +
+          '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + fmt(r.revenue) + '</span></div>' +
+          '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:' + (r.qty/maxQty*100) + '%"></div></div>' +
+        '</div>';
+      }).join("");
+
+    var txList = document.getElementById("txList");
+    var sorted = sales.slice().sort(function(a,b){ return new Date(b.ts)-new Date(a.ts); });
+    txList.innerHTML = sorted.length===0 ? '<div class="empty-state">' + scopeLabel() + '尚無交易紀錄</div>' :
+      sorted.map(function(s){
+        var itemsSummary = itemsSummaryOf(s.items);
+        var timeLabel = new Date(s.ts).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+        return '<div class="tx-row" data-id="' + s.id + '">' +
+          '<span class="tx-time">' + timeLabel + '</span>' +
+          '<span class="tx-items" title="' + escapeHtml(itemsSummary) + '">' + escapeHtml(itemsSummary) + '</span>' +
+          '<span class="tx-badge ' + s.method + '">' + (s.method==="cash"?"現金":"行動支付") + '</span>' +
+          '<span class="tx-total mono">' + fmt(s.total) + '</span>' +
+          '<button class="tx-delete" data-act="del" title="刪除並回補庫存">✕</button>' +
+        '</div>';
+      }).join("");
+    txList.querySelectorAll(".tx-row").forEach(function(row){
+      var id = row.dataset.id;
+      row.querySelector('[data-act="del"]').addEventListener("click", function(){
+        confirmAction("刪除交易紀錄", "確定要刪除這筆交易嗎？商品庫存將會回補。", function(){
+          var sale = state.sales.find(function(s){return s.id===id;});
+          if(sale){
+            sale.items.forEach(function(it){
+              var p = state.products.find(function(x){return x.id===it.id;});
+              if(p) p.stock += it.qty;
+            });
+            state.sales = state.sales.filter(function(s){return s.id!==id;});
+            saveState(); renderReports(); renderProductGrid();
+          }
+        });
+      });
+    });
+  }
+
+  function toCsvCell(v){
+    v = String(v==null?"":v);
+    if(/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }
+  function toCsv(rows){ return "﻿" + rows.map(function(r){return r.map(toCsvCell).join(",");}).join("\r\n"); }
+
+  document.getElementById("exportTxBtn").addEventListener("click", function(){
+    var sales = scopedSales().slice().sort(function(a,b){return new Date(a.ts)-new Date(b.ts);});
+    var rows = [["時間","商品明細","付款方式","收款","找零","總計"]];
+    sales.forEach(function(s){
+      rows.push([
+        new Date(s.ts).toLocaleString("zh-TW"),
+        itemsSummaryOf(s.items),
+        s.method==="cash"?"現金":"行動支付",
+        s.received, s.change, s.total
+      ]);
+    });
+    var fname = "交易紀錄-" + scopeLabel().replace(/[\/\\?%*:|"<>~]/g,"-") + "-" + new Date().toISOString().slice(0,10) + ".csv";
+    saveFile(fname, toCsv(rows));
+  });
+  document.getElementById("exportProductsBtn").addEventListener("click", function(){
+    var rows = [["商品名稱","編號","計價方式","單價","多件特價","庫存"]];
+    state.products.forEach(function(p){
+      var isWeighed = p.pricingType === "weighed";
+      rows.push([
+        p.name, p.sku||"",
+        isWeighed ? "秤重計價" : "單價計件",
+        isWeighed ? "" : p.price,
+        (!isWeighed && p.bundleQty && p.bundlePrice) ? (p.bundleQty + "件" + p.bundlePrice) : "",
+        isWeighed ? "不追蹤" : p.stock
+      ]);
+    });
+    saveFile("商品清單-" + new Date().toISOString().slice(0,10) + ".csv", toCsv(rows));
+  });
+
+  function reportPrintHTML(){
+    var sales = scopedSales();
+    var revenue = sales.reduce(function(s,x){return s+x.total;},0);
+    var count = sales.length;
+    var qty = totalQty(sales);
+    var qtyMap = buildQtyMap(sales);
+    var rows = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
+      .sort(function(a,b){return b.qty-a.qty;});
+    var rowsHtml = rows.length===0 ? '<div class="receipt-meta">尚無銷售資料</div>' :
+      rows.map(function(r){
+        return '<div class="receipt-line"><span>' + escapeHtml(r.name) + '</span><span class="mono">' + r.qty + ' 件・' + fmt(r.revenue) + '</span></div>';
+      }).join("");
+    return '<div class="receipt-paper" style="max-width:420px;">' +
+      '<div class="receipt-shop">' + escapeHtml(state.eventName||"展場攤位") + '</div>' +
+      '<div class="receipt-meta">銷售總表・' + scopeLabel() + '</div>' +
+      '<div class="receipt-meta">' + new Date().toLocaleString("zh-TW") + '</div>' +
+      '<hr class="receipt-rule"/>' +
+      '<div class="receipt-line"><span>交易筆數</span><span class="mono">' + count + '</span></div>' +
+      '<div class="receipt-line"><span>銷售總數量</span><span class="mono">' + qty + ' 件</span></div>' +
+      '<div class="receipt-line receipt-total"><span>總營收</span><span class="mono">' + fmt(revenue) + '</span></div>' +
+      '<hr class="receipt-rule"/>' + rowsHtml +
+    '</div>';
+  }
+  document.getElementById("printReportBtn").addEventListener("click", function(){
+    document.getElementById("printArea").innerHTML = reportPrintHTML();
+    window.print();
+  });
+
+  /* ---------- Settings ---------- */
+  function renderSettings(){
+    document.getElementById("eventNameInput").value = state.eventName;
+    document.getElementById("currencyInput").value = state.currency;
+    document.getElementById("boothCodeDisplay").textContent = boothCode || "—";
+    document.getElementById("currentSessionDisplay").textContent = state.sessionDate || "—";
+    document.getElementById("syncStatus").textContent = boothDocRef ? "雲端已連線，跨裝置即時同步" : "連線中…";
+  }
+  function logoutBooth(){
+    confirmAction("切換攤位", "確定要登出目前的攤位「" + (boothCode||"") + "」嗎？資料仍會保留，下次登入需要再輸入一次密碼。", function(){
+      if(boothUnsub){ boothUnsub(); boothUnsub = null; }
+      clearTimeout(cloudSyncTimer);
+      if(auth) auth.signOut();
+      resetToGate();
+    });
+  }
+  document.getElementById("switchBoothBtn").addEventListener("click", logoutBooth);
+  document.getElementById("topbarLogoutBtn").addEventListener("click", logoutBooth);
+
+  /* ---------- Day sessions (archive-on-new-day) ---------- */
+  function loadSessionHistory(code){
+    return db.collection(DB_COLLECTION + "/" + code + "/sessions").orderBy("date","desc").limit(90).get()
+      .then(function(snap){
+        var list = [];
+        snap.forEach(function(doc){ list.push(doc.data()); });
+        return list;
+      }).catch(function(){ return []; });
+  }
+
+  function renderSessionGateHistory(list){
+    var wrap = document.getElementById("sessionList");
+    var empty = document.getElementById("sessionListEmpty");
+    if(!list.length){ wrap.innerHTML = ""; empty.hidden = false; return; }
+    empty.hidden = true;
+    wrap.innerHTML = list.map(function(s){
+      return '<button class="gate-booth-item session-item" data-date="' + escapeHtml(s.date) + '">' +
+        '<span class="gate-booth-name">' + escapeHtml(s.date) + '</span>' +
+        '<span class="gate-booth-code mono">' + fmt(s.revenue||0) + '</span>' +
+      '</button>';
+    }).join("");
+    wrap.querySelectorAll(".session-item").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var found = list.find(function(s){ return s.date === btn.dataset.date; });
+        if(found) openSessionView(found);
+      });
+    });
+  }
+
+  function showSessionGate(){
+    document.getElementById("lastSessionDateLabel").textContent = state.sessionDate || "—";
+    document.getElementById("sessionGate").hidden = false;
+    document.getElementById("sessionList").innerHTML = '<p class="hint">載入中…</p>';
+    document.getElementById("sessionListEmpty").hidden = true;
+    loadSessionHistory(boothCode).then(renderSessionGateHistory);
+  }
+  function hideSessionGate(){
+    document.getElementById("sessionGate").hidden = true;
+  }
+
+  function startNewSession(){
+    var prevDate = state.sessionDate || todayStr();
+    var today = todayStr();
+    if(prevDate === today){ toast("今天已經是最新場次了"); return; }
+    confirmAction("開始新場次", "確定要開始今天（" + today + "）的新場次嗎？" + prevDate + " 的銷售紀錄會封存保留；商品庫存會全部歸零，請記得到「商品」頁重新輸入今天的庫存數量，商品名稱與價格會自動沿用。", function(){
+      var archive = {
+        date: prevDate,
+        eventName: state.eventName,
+        currency: state.currency,
+        products: cloneState(state.products),
+        sales: cloneState(state.sales),
+        revenue: state.sales.reduce(function(s,x){return s+x.total;},0),
+        archivedAt: new Date().toISOString()
+      };
+      var archiveRef = db.doc(DB_COLLECTION + "/" + boothCode + "/sessions/" + prevDate);
+      archiveRef.set(archive).then(function(){
+        state.sales = [];
+        state.products = state.products.map(function(p){ return Object.assign({}, p, {stock: p.pricingType==="weighed" ? p.stock : 0}); });
+        state.sessionDate = today;
+        cart = [];
+        saveState();
+        hideSessionGate();
+        refreshAllUI();
+        toast("已開始今天的新場次，記得到「商品」頁設定今天的庫存");
+      }).catch(function(e){ toast("封存失敗：" + (e && e.message ? e.message : "")); });
+    });
+  }
+  document.getElementById("startNewSessionBtn").addEventListener("click", startNewSession);
+  document.getElementById("settingsNewSessionBtn").addEventListener("click", startNewSession);
+  document.getElementById("continueOldSessionBtn").addEventListener("click", function(){
+    hideSessionGate();
+  });
+
+  function openSessionView(session){
+    var sales = session.sales || [];
+    var revenue = sales.reduce(function(s,x){return s+x.total;},0);
+    var count = sales.length;
+    var qty = totalQty(sales);
+    var qtyMap = buildQtyMap(sales);
+    var ranked = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
+      .sort(function(a,b){return b.qty-a.qty;}).slice(0,5);
+    var maxQty = ranked.length ? ranked[0].qty : 1;
+    var sorted = sales.slice().sort(function(a,b){ return new Date(b.ts)-new Date(a.ts); });
+
+    var html = '<div class="stat-grid">' +
+        '<div class="stat-tile"><div class="stat-tile-label">營收</div><div class="stat-tile-value mono">' + fmt(revenue) + '</div></div>' +
+        '<div class="stat-tile"><div class="stat-tile-label">交易筆數</div><div class="stat-tile-value mono">' + count + '</div></div>' +
+        '<div class="stat-tile"><div class="stat-tile-label">銷售總數量</div><div class="stat-tile-value mono">' + qty + '</div></div>' +
+      '</div>';
+    html += '<div class="section-title" style="margin:16px 0 8px;font-size:15px;">熱銷商品</div>';
+    html += ranked.length===0 ? '<div class="empty-state">當天無銷售</div>' : ranked.map(function(r,i){
+      return '<div class="rank-row"><span class="rank-idx">' + (i+1) + '</span><span class="rank-name">' + escapeHtml(r.name) + '</span>' +
+        '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + fmt(r.revenue) + '</span></div>' +
+        '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:' + (r.qty/maxQty*100) + '%"></div></div></div>';
+    }).join("");
+    html += '<div class="section-title" style="margin:16px 0 8px;font-size:15px;">交易紀錄</div>';
+    html += sorted.length===0 ? '<div class="empty-state">當天無交易</div>' : sorted.map(function(s){
+      var timeLabel = new Date(s.ts).toLocaleString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+      return '<div class="sess-tx-row">' +
+        '<div class="sess-tx-top"><span class="mono">' + timeLabel + '</span><span class="tx-badge ' + s.method + '">' + (s.method==="cash"?"現金":"行動支付") + '</span><span class="mono">' + fmt(s.total) + '</span></div>' +
+        '<div class="sess-tx-items">' + escapeHtml(itemsSummaryOf(s.items)) + '</div>' +
+      '</div>';
+    }).join("");
+
+    document.getElementById("sessionViewTitle").textContent = session.date + " 場次報表";
+    document.getElementById("sessionViewBody").innerHTML = html;
+    document.getElementById("sessionViewModal").hidden = false;
+  }
+  function closeSessionView(){ document.getElementById("sessionViewModal").hidden = true; }
+  document.getElementById("sessionViewClose").addEventListener("click", closeSessionView);
+  document.getElementById("sessionViewCloseX").addEventListener("click", closeSessionView);
+  document.getElementById("eventNameInput").addEventListener("input", function(e){
+    state.eventName = e.target.value;
+    document.getElementById("eventNameDisplay").textContent = e.target.value || "攤位收銀台";
+    saveState();
+  });
+  document.getElementById("currencyInput").addEventListener("input", function(e){
+    state.currency = e.target.value || "NT$";
+    saveState(); renderCart(); renderProductGrid();
+  });
+
+  document.getElementById("exportBackupBtn").addEventListener("click", function(){
+    var stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+    saveFile("展場POS備份-" + stamp + ".json", JSON.stringify(state,null,2));
+  });
+  document.getElementById("importFileInput").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var parsed = JSON.parse(reader.result);
+        if(!parsed || !Array.isArray(parsed.products) || !Array.isArray(parsed.sales)) throw new Error("格式不正確");
+        confirmAction("匯入備份", "匯入將覆蓋目前所有商品與交易資料，確定繼續嗎？", function(){
+          state = parsed;
+          cart = [];
+          saveState();
+          renderProductGrid(); renderCart(); renderProducts(); renderReports(); renderSettings();
+          toast("已匯入備份資料");
+        });
+      }catch(err){ toast("匯入失敗：檔案格式不正確"); }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("clearSalesBtn").addEventListener("click", function(){
+    confirmAction("清除銷售紀錄", "確定要清除所有交易紀錄嗎？商品清單與庫存不受影響，此動作無法復原。", function(){
+      state.sales = [];
+      saveState(); renderReports();
+      toast("已清除銷售紀錄");
+    });
+  });
+  document.getElementById("resetAllBtn").addEventListener("click", function(){
+    confirmAction("重置所有資料", "確定要重置所有資料嗎？將清空目前商品、庫存與交易紀錄，恢復成初始範例，此動作無法復原。", function(){
+      state = seedState();
+      cart = [];
+      saveState();
+      renderProductGrid(); renderCart(); renderProducts(); renderReports(); renderSettings();
+      toast("已重置為初始範例資料");
+    });
+  });
+
+  /* ---------- Delete booth ---------- */
+  var DELETE_BOOTH_PASSPHRASE = "0907";
+
+  function deleteSessionsSubcollection(code){
+    return db.collection(DB_COLLECTION + "/" + code + "/sessions").limit(500).get().then(function(snap){
+      var deletes = [];
+      snap.forEach(function(doc){ deletes.push(doc.ref.delete()); });
+      return Promise.all(deletes);
+    });
+  }
+
+  function removeFromBoothIndex(code){
+    var idxRef = db.doc(INDEX_PATH);
+    return idxRef.get().then(function(snap){
+      if(!snap.exists) return;
+      var list = (Array.isArray(snap.data().booths) ? snap.data().booths : []).filter(function(b){ return b && b.code !== code; });
+      return idxRef.set({booths:list});
+    });
+  }
+
+  document.getElementById("deleteBoothBtn").addEventListener("click", function(){
+    document.getElementById("deleteBoothNameLabel").textContent = state.eventName || boothCode;
+    document.getElementById("deleteBoothCodeLabel").textContent = boothCode;
+    document.getElementById("deleteBoothPassphrase").value = "";
+    document.getElementById("deleteBoothModal").hidden = false;
+  });
+  function closeDeleteBoothModal(){ document.getElementById("deleteBoothModal").hidden = true; }
+  document.getElementById("deleteBoothCloseX").addEventListener("click", closeDeleteBoothModal);
+  document.getElementById("deleteBoothCancel").addEventListener("click", closeDeleteBoothModal);
+  document.getElementById("deleteBoothConfirm").addEventListener("click", function(){
+    var input = document.getElementById("deleteBoothPassphrase").value.trim();
+    if(input !== DELETE_BOOTH_PASSPHRASE){ toast("通關密語不正確"); return; }
+    var codeToDelete = boothCode;
+    var refToDelete = boothDocRef;
+    closeDeleteBoothModal();
+    toast("正在刪除攤位…");
+    deleteSessionsSubcollection(codeToDelete)
+      .then(function(){ return removeFromBoothIndex(codeToDelete); })
+      .then(function(){ return refToDelete.delete(); })
+      .then(function(){
+        var user = auth.currentUser;
+        return user ? user.delete() : null;
+      })
+      .then(function(){
+        toast("攤位「" + codeToDelete + "」已永久刪除");
+        if(boothUnsub){ boothUnsub(); boothUnsub = null; }
+        clearTimeout(cloudSyncTimer);
+        resetToGate();
+      })
+      .catch(function(e){
+        if(e && e.code === "auth/requires-recent-login"){
+          toast("為了安全，請登出後重新登入這個攤位再試一次刪除");
+        } else {
+          toast("刪除失敗：" + (e && e.message ? e.message : ""));
+        }
+      });
+  });
+
+  /* ---------- Confirm modal ---------- */
+  var pendingConfirm = null;
+  function confirmAction(title, msg, onConfirm){
+    document.getElementById("confirmTitle").textContent = title;
+    document.getElementById("confirmMsg").textContent = msg;
+    pendingConfirm = onConfirm;
+    document.getElementById("confirmModal").hidden = false;
+  }
+  function closeConfirm(){ document.getElementById("confirmModal").hidden = true; pendingConfirm = null; }
+  document.getElementById("confirmCancel").addEventListener("click", closeConfirm);
+  document.getElementById("confirmCloseX").addEventListener("click", closeConfirm);
+  document.getElementById("confirmOk").addEventListener("click", function(){
+    var fn = pendingConfirm;
+    closeConfirm();
+    if(fn) fn();
+  });
+
+  /* ---------- Booth login ---------- */
+  function sanitizeCode(raw){
+    var c = (raw||"").trim().toLowerCase();
+    c = c.replace(/[^a-z0-9\-_.]+/g,"-").replace(/^-+|-+$/g,"");
+    return c.slice(0,40);
+  }
+
+  function showGateMsg(msg){
+    var m = document.getElementById("gateMsg");
+    m.textContent = msg;
+    m.hidden = false;
+  }
+
+  function refreshAllUI(){
+    document.getElementById("eventNameDisplay").textContent = state.eventName || "攤位收銀台";
+    document.getElementById("boothBadgeDisplay").textContent = boothCode ? (boothCode.toUpperCase() + " ・ ") : "";
+    renderProductGrid(); renderCart(); renderProducts(); renderReports(); renderSettings();
+    updatePreorderBadge();
+  }
+
+  function reconcileCartWithProducts(){
+    cart = cart.map(function(c){
+      var p = state.products.find(function(x){return x.id===c.id;});
+      if(!p) return null;
+      if(c.pricingType === "weighed") return { id:c.id, name:p.name, price:0, qty:1, pricingType:"weighed", bundleQty:null, bundlePrice:null, amount:c.amount };
+      var qty = Math.min(c.qty, p.stock);
+      return qty>0 ? { id:c.id, name:p.name, price:p.price, qty:qty, pricingType:"unit", bundleQty:p.bundleQty||null, bundlePrice:p.bundlePrice||null, amount:null } : null;
+    }).filter(Boolean);
+  }
+
+  function subscribeBooth(){
+    if(boothUnsub){ boothUnsub(); boothUnsub = null; }
+    if(!boothDocRef) return;
+    boothUnsub = boothDocRef.onSnapshot(function(snap){
+      if(!snap.exists) return;
+      if(snap.metadata && snap.metadata.hasPendingWrites) return;
+      var incoming = snap.data();
+      if(!isValidState(incoming)) return;
+      if(JSON.stringify(incoming) === JSON.stringify(state)) return;
+      state = cloneState(incoming);
+      reconcileCartWithProducts();
+      refreshAllUI();
+    }, function(err){
+      toast("雲端連線中斷：" + (err && err.message ? err.message : ""));
+    });
+  }
+
+  function stopGateIndexWatch(){
+    if(gateIndexUnsub){ gateIndexUnsub(); gateIndexUnsub = null; }
+  }
+
+  function finalizeEnter(code, ref){
+    boothCode = code;
+    boothDocRef = ref;
+    stopGateIndexWatch();
+    document.getElementById("boothGate").hidden = true;
+    subscribeBooth();
+    if(!state.sessionDate){ state.sessionDate = todayStr(); saveState(); }
+    refreshAllUI();
+    if(state.sessionDate !== todayStr()){
+      showSessionGate();
+    }
+  }
+
+  function addToBoothIndex(code, name){
+    var idxRef = db.doc(INDEX_PATH);
+    return idxRef.get().then(function(snap){
+      var list = (snap.exists && Array.isArray(snap.data().booths)) ? snap.data().booths.slice() : [];
+      if(!list.some(function(b){ return b && b.code === code; })){
+        list.push({code:code, name:name||code, createdAt:new Date().toISOString()});
+      }
+      return idxRef.set({booths:list});
+    });
+  }
+
+  function renderGateBoothList(list){
+    var wrap = document.getElementById("gateBoothList");
+    var empty = document.getElementById("gateListEmpty");
+    if(!list || list.length===0){
+      wrap.innerHTML = "";
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+    var sorted = list.slice().sort(function(a,b){
+      return (a.name||a.code).localeCompare(b.name||b.code, "zh-Hant");
+    });
+    wrap.innerHTML = sorted.map(function(b){
+      return '<button class="gate-booth-item" data-code="' + escapeHtml(b.code) + '">' +
+        '<span class="gate-booth-name">' + escapeHtml(b.name||b.code) + '</span>' +
+        '<span class="gate-booth-code mono">' + escapeHtml(b.code) + '</span>' +
+      '</button>';
+    }).join("");
+    wrap.querySelectorAll(".gate-booth-item").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        document.getElementById("gateCodeInput").value = btn.dataset.code;
+        showGateSection("manual");
+        document.getElementById("gateLoginPassword").focus();
+      });
+    });
+  }
+
+  function loadBoothIndex(){
+    stopGateIndexWatch();
+    document.getElementById("gateBoothList").innerHTML = '<p class="hint">載入攤位清單中…</p>';
+    document.getElementById("gateListEmpty").hidden = true;
+    var ref = db.doc(INDEX_PATH);
+    gateIndexUnsub = ref.onSnapshot(function(snap){
+      var data = snap.exists ? snap.data() : null;
+      renderGateBoothList(data && Array.isArray(data.booths) ? data.booths : []);
+    }, function(){
+      renderGateBoothList([]);
+    });
+  }
+
+  function showGateSection(name){
+    document.getElementById("gateListSection").hidden = name !== "list";
+    document.getElementById("gateRegisterSection").hidden = name !== "register";
+    document.getElementById("gateManualSection").hidden = name !== "manual";
+    document.getElementById("gateMsg").hidden = true;
+  }
+
+  function authErrorMessage(err, context){
+    var code = err && err.code;
+    if(code === "auth/email-already-in-use") return "此代碼已經被註冊，請從清單登入或換一個代碼";
+    if(code === "auth/weak-password") return "密碼至少需要 6 個字元";
+    if(code === "auth/invalid-email") return "攤位代碼包含無法使用的字元，請換一個代碼";
+    if(code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/invalid-login-credentials") return "攤位代碼或密碼錯誤";
+    if(code === "auth/user-not-found") return "找不到這個攤位代碼";
+    if(code === "auth/too-many-requests") return "嘗試次數過多，請稍後再試";
+    if(code === "auth/network-request-failed") return "網路連線異常，請檢查網路後再試";
+    return (context||"操作失敗") + "：" + (err && err.message ? err.message : "未知錯誤");
+  }
+
+  function loadBoothAfterAuth(code){
+    var ref = db.doc(DB_COLLECTION + "/" + code);
+    return ref.get().then(function(snap){
+      if(snap.exists && isValidState(snap.data())){
+        state = cloneState(snap.data());
+      } else {
+        state = seedState();
+        return ref.set(state).then(function(){ finalizeEnter(code, ref); });
+      }
+      finalizeEnter(code, ref);
+    });
+  }
+
+  function loginBooth(code, password){
+    auth.signInWithEmailAndPassword(boothEmail(code), password).then(function(){
+      return loadBoothAfterAuth(code);
+    }).catch(function(err){
+      showGateMsg(authErrorMessage(err, "登入失敗"));
+    });
+  }
+
+  function registerBooth(code, name, password){
+    auth.createUserWithEmailAndPassword(boothEmail(code), password).then(function(){
+      var seeded = seedState();
+      seeded.eventName = name;
+      var ref = db.doc(DB_COLLECTION + "/" + code);
+      return ref.set(seeded).then(function(){
+        return addToBoothIndex(code, name);
+      }).then(function(){
+        state = seeded;
+        finalizeEnter(code, ref);
+      });
+    }).catch(function(err){
+      showGateMsg(authErrorMessage(err, "建立失敗"));
+    });
+  }
+
+  document.getElementById("gateShowRegisterBtn").addEventListener("click", function(){ showGateSection("register"); });
+  document.getElementById("gateShowManualBtn").addEventListener("click", function(){ showGateSection("manual"); });
+  document.getElementById("gateRegisterCancel").addEventListener("click", function(){ showGateSection("list"); });
+  document.getElementById("gateManualCancel").addEventListener("click", function(){ showGateSection("list"); });
+
+  document.getElementById("gateRegisterBtn").addEventListener("click", function(){
+    var code = sanitizeCode(document.getElementById("gateRegCode").value);
+    var name = document.getElementById("gateRegName").value.trim();
+    var pw = document.getElementById("gateRegPassword").value;
+    var pw2 = document.getElementById("gateRegPassword2").value;
+    if(!code){ showGateMsg("請輸入攤位代碼"); return; }
+    if(!name){ showGateMsg("請輸入攤位名稱"); return; }
+    if(pw.length < 6){ showGateMsg("密碼至少需要 6 個字元"); return; }
+    if(pw !== pw2){ showGateMsg("兩次輸入的密碼不一致"); return; }
+    document.getElementById("gateMsg").hidden = true;
+    registerBooth(code, name, pw);
+  });
+
+  document.getElementById("gateEnterBtn").addEventListener("click", function(){
+    var code = sanitizeCode(document.getElementById("gateCodeInput").value);
+    var pw = document.getElementById("gateLoginPassword").value;
+    if(!code){ showGateMsg("請輸入攤位代碼"); return; }
+    if(!pw){ showGateMsg("請輸入密碼"); return; }
+    document.getElementById("gateMsg").hidden = true;
+    loginBooth(code, pw);
+  });
+  document.getElementById("gateLoginPassword").addEventListener("keydown", function(e){
+    if(e.key === "Enter") document.getElementById("gateEnterBtn").click();
+  });
+  document.getElementById("gateRegPassword2").addEventListener("keydown", function(e){
+    if(e.key === "Enter") document.getElementById("gateRegisterBtn").click();
+  });
+
+  function resetToGate(){
+    boothCode = null;
+    boothDocRef = null;
+    state = null;
+    cart = [];
+    hideSessionGate();
+    document.getElementById("gateCodeInput").value = "";
+    document.getElementById("gateLoginPassword").value = "";
+    document.getElementById("gateRegCode").value = "";
+    document.getElementById("gateRegName").value = "";
+    document.getElementById("gateRegPassword").value = "";
+    document.getElementById("gateRegPassword2").value = "";
+    document.getElementById("boothGate").hidden = false;
+    showGateSection("list");
+    loadBoothIndex();
+  }
+
+  /* ---------- Init ---------- */
+  function showFatalError(msg){
+    document.getElementById("gateListSection").hidden = true;
+    document.getElementById("gateRegisterSection").hidden = true;
+    document.getElementById("gateManualSection").hidden = true;
+    document.getElementById("gateHintText").hidden = true;
+    showGateMsg(msg);
+  }
+
+  (function init(){
+    if(!firebaseReady){
+      showFatalError("無法連線到雲端服務，請檢查網路連線或稍後再試整頁重新整理。");
+      return;
+    }
+    var handledInitialAuth = false;
+    auth.onAuthStateChanged(function(user){
+      if(handledInitialAuth) return;
+      handledInitialAuth = true;
+      if(user && user.email && user.email.indexOf(BOOTH_EMAIL_DOMAIN) === user.email.length - BOOTH_EMAIL_DOMAIN.length){
+        var code = user.email.slice(0, user.email.length - BOOTH_EMAIL_DOMAIN.length);
+        loadBoothAfterAuth(code).catch(function(e){
+          showGateMsg("讀取攤位資料失敗：" + (e && e.message ? e.message : ""));
+          showGateSection("list");
+          loadBoothIndex();
+        });
+      } else {
+        showGateSection("list");
+        loadBoothIndex();
+      }
+    });
+  })();
+})();
+</script>
+</body>
+</html>
