@@ -2,6 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isAdmin(){
+      return request.auth != null && request.auth.token.email == 'master@admin.boothpos.local';
+    }
+
     // Public list of registered booths (code + name only) so the login
     // screen can show them before anyone signs in. Any signed-in booth
     // account may append to it (during registration).
@@ -12,10 +16,11 @@ service cloud.firestore {
 
     // Each booth's product/stock/sales data. Only the matching booth
     // account (signed in with that booth's own password via Firebase
-    // Auth) may read or write it.
+    // Auth) may read or write it. The reserved master admin account may
+    // read (never write) every booth, for the read-only sales dashboard.
     match /booths/{boothId} {
       allow read: if request.auth != null
-                  && request.auth.token.email == boothId + '@booths.boothpos.local';
+                  && (request.auth.token.email == boothId + '@booths.boothpos.local' || isAdmin());
       allow create: if request.auth != null
                     && request.auth.token.email == boothId + '@booths.boothpos.local';
       allow update: if request.auth != null
@@ -26,10 +31,11 @@ service cloud.firestore {
                     && request.auth.token.email == boothId + '@booths.boothpos.local';
 
       // Read-only day-session archives created when a booth starts a new
-      // market day. Same booth-account-only access as the live document.
+      // market day. Same booth-account-only access as the live document,
+      // plus read-only access for the master admin dashboard.
       match /sessions/{sessionId} {
         allow read: if request.auth != null
-                    && request.auth.token.email == boothId + '@booths.boothpos.local';
+                    && (request.auth.token.email == boothId + '@booths.boothpos.local' || isAdmin());
         allow create: if request.auth != null
                       && request.auth.token.email == boothId + '@booths.boothpos.local';
         allow update: if request.auth != null

@@ -225,6 +225,13 @@
   .stk-result{font-size:12.5px;color:var(--ink-soft);}
   .stk-result b{font-family:var(--font-mono);color:var(--ink);}
   .stocktake-totals{margin-top:12px;padding:10px 12px;background:var(--accent-soft);border-radius:var(--radius-m);font-size:13px;font-weight:600;color:var(--accent-strong);}
+
+  /* Admin dashboard */
+  .admin-booth-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;padding:12px 4px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .admin-booth-row:last-child{border-bottom:none;}
+  .admin-booth-name{font-weight:600;}
+  .admin-booth-stats{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);}
+  .admin-booth-stats b{color:var(--ink);font-weight:700;}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
   .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
@@ -330,6 +337,7 @@
       <p class="hint" id="gateListEmpty" hidden>目前還沒有已註冊的攤位。</p>
       <button class="btn btn-primary" id="gateShowRegisterBtn" style="width:100%;justify-content:center;">＋ 註冊新攤位</button>
       <button class="btn btn-sm" id="gateShowManualBtn" style="width:100%;justify-content:center;">用代碼直接登入</button>
+      <button class="btn btn-sm" id="gateShowAdminBtn" style="width:100%;justify-content:center;">管理主控台</button>
     </div>
 
     <div class="gate-section" id="gateRegisterSection" hidden>
@@ -364,6 +372,15 @@
       </div>
       <button class="btn btn-primary" id="gateEnterBtn" style="width:100%;justify-content:center;">登入</button>
       <button class="btn btn-sm" id="gateManualCancel" style="width:100%;justify-content:center;">‹ 返回清單</button>
+    </div>
+
+    <div class="gate-section" id="gateAdminSection" hidden>
+      <div class="field">
+        <label>管理密碼</label>
+        <input id="gateAdminPassword" type="password" placeholder="輸入管理密碼" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" id="gateAdminEnterBtn" style="width:100%;justify-content:center;">登入主控台</button>
+      <button class="btn btn-sm" id="gateAdminCancel" style="width:100%;justify-content:center;">‹ 返回清單</button>
     </div>
 
     <p class="gate-msg" id="gateMsg" hidden></p>
@@ -617,6 +634,60 @@
   </main>
 </div>
 
+<div id="adminApp" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="迦南地 市集攤位POS系統" width="900" height="599" />
+      <div class="brand-text">
+        <span class="brand-name">銷售主控台</span>
+        <span class="brand-sub">所有攤位彙總統計</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="logout-btn" id="adminLogoutBtn" title="登出主控台">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        登出
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="tab-panel active" style="max-width:900px;margin:0 auto;padding:20px 16px;">
+      <div class="card">
+        <div class="section-head"><span class="section-title">查詢區間</span></div>
+        <div class="range-row">
+          <div class="field" style="min-width:150px;">
+            <label>起始日期</label>
+            <input type="date" id="adminRangeStart" />
+          </div>
+          <div class="field" style="min-width:150px;">
+            <label>結束日期</label>
+            <input type="date" id="adminRangeEnd" />
+          </div>
+          <button class="btn btn-sm" id="adminRangeTodayBtn">今日</button>
+          <button class="btn btn-primary btn-sm" id="adminQueryBtn">查詢</button>
+        </div>
+        <p class="hint" id="adminLoadingHint" hidden>載入中…</p>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><span class="section-title">全部攤位加總</span></div>
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="stat-tile-label">總營收</div><div class="stat-tile-value mono" id="adminStatRevenue">NT$0</div></div>
+          <div class="stat-tile"><div class="stat-tile-label">總交易筆數</div><div class="stat-tile-value mono" id="adminStatCount">0</div></div>
+          <div class="stat-tile"><div class="stat-tile-label">總銷售數量</div><div class="stat-tile-value mono" id="adminStatQty">0</div></div>
+          <div class="stat-tile"><div class="stat-tile-label">攤位數</div><div class="stat-tile-value mono" id="adminStatBooths">0</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><span class="section-title">各攤位明細</span></div>
+        <div id="adminBoothList"><div class="empty-state">請選擇日期區間後查詢</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
 <div class="modal-overlay" id="receiptModal" hidden>
   <div class="modal receipt-modal">
     <div class="modal-head"><h3>結帳完成</h3><button class="modal-close" id="receiptCloseX">✕</button></div>
@@ -796,6 +867,7 @@
   }
   var BOOTH_EMAIL_DOMAIN = "@booths.boothpos.local";
   function boothEmail(code){ return code + BOOTH_EMAIL_DOMAIN; }
+  var ADMIN_EMAIL = "master@admin.boothpos.local";
   var DB_COLLECTION = "booths";
   var INDEX_PATH = "booths_index/list";
 
@@ -2403,6 +2475,7 @@
     document.getElementById("gateListSection").hidden = name !== "list";
     document.getElementById("gateRegisterSection").hidden = name !== "register";
     document.getElementById("gateManualSection").hidden = name !== "manual";
+    document.getElementById("gateAdminSection").hidden = name !== "admin";
     document.getElementById("gateMsg").hidden = true;
   }
 
@@ -2457,8 +2530,10 @@
 
   document.getElementById("gateShowRegisterBtn").addEventListener("click", function(){ showGateSection("register"); });
   document.getElementById("gateShowManualBtn").addEventListener("click", function(){ showGateSection("manual"); });
+  document.getElementById("gateShowAdminBtn").addEventListener("click", function(){ showGateSection("admin"); });
   document.getElementById("gateRegisterCancel").addEventListener("click", function(){ showGateSection("list"); });
   document.getElementById("gateManualCancel").addEventListener("click", function(){ showGateSection("list"); });
+  document.getElementById("gateAdminCancel").addEventListener("click", function(){ showGateSection("list"); });
 
   document.getElementById("gateRegisterBtn").addEventListener("click", function(){
     var code = sanitizeCode(document.getElementById("gateRegCode").value);
@@ -2483,6 +2558,125 @@
   });
   document.getElementById("gateLoginPassword").addEventListener("keydown", function(e){
     if(e.key === "Enter") document.getElementById("gateEnterBtn").click();
+  });
+
+  document.getElementById("gateAdminEnterBtn").addEventListener("click", function(){
+    var pw = document.getElementById("gateAdminPassword").value;
+    if(!pw){ showGateMsg("請輸入管理密碼"); return; }
+    document.getElementById("gateMsg").hidden = true;
+    auth.signInWithEmailAndPassword(ADMIN_EMAIL, pw).then(function(){
+      enterAdminConsole();
+    }).catch(function(err){
+      showGateMsg(authErrorMessage(err, "登入失敗"));
+    });
+  });
+  document.getElementById("gateAdminPassword").addEventListener("keydown", function(e){
+    if(e.key === "Enter") document.getElementById("gateAdminEnterBtn").click();
+  });
+
+  /* ---------- Admin dashboard (read-only, all booths) ---------- */
+  function adminFmt(n){ n = Number(n)||0; return "NT$" + n.toLocaleString("en-US",{maximumFractionDigits:2}); }
+
+  function enterAdminConsole(){
+    document.getElementById("boothGate").hidden = true;
+    document.getElementById("app").hidden = true;
+    document.getElementById("adminApp").hidden = false;
+    document.getElementById("gateAdminPassword").value = "";
+    var today = todayStr();
+    document.getElementById("adminRangeStart").value = today;
+    document.getElementById("adminRangeEnd").value = today;
+    runAdminQuery();
+  }
+
+  function exitAdminConsole(){
+    document.getElementById("adminApp").hidden = true;
+    document.getElementById("app").hidden = false;
+    if(auth) auth.signOut();
+    document.getElementById("boothGate").hidden = false;
+    showGateSection("list");
+    loadBoothIndex();
+  }
+  document.getElementById("adminLogoutBtn").addEventListener("click", function(){
+    confirmAction("登出主控台", "確定要登出管理主控台嗎？", exitAdminConsole);
+  });
+
+  function loadBoothRangeSummary(code, startVal, endVal, startMs, endMs){
+    var liveRef = db.doc(DB_COLLECTION + "/" + code);
+    var sessionsQuery = db.collection(DB_COLLECTION + "/" + code + "/sessions")
+      .where("date", ">=", startVal).where("date", "<=", endVal);
+    return Promise.all([liveRef.get(), sessionsQuery.get()]).then(function(res){
+      var liveSnap = res[0], sessionsSnap = res[1];
+      var allSales = [];
+      sessionsSnap.forEach(function(doc){
+        var d = doc.data();
+        if(Array.isArray(d.sales)) allSales = allSales.concat(d.sales);
+      });
+      if(liveSnap.exists){
+        var live = liveSnap.data();
+        if(live.sessionDate && live.sessionDate >= startVal && live.sessionDate <= endVal && Array.isArray(live.sales)){
+          allSales = allSales.concat(live.sales);
+        }
+      }
+      var filtered = allSales.filter(function(s){ var t = new Date(s.ts).getTime(); return t>=startMs && t<=endMs; });
+      return { revenue: filtered.reduce(function(s,x){return s+x.total;},0), count: filtered.length, qty: totalQty(filtered) };
+    }).catch(function(){
+      return { revenue:0, count:0, qty:0, error:true };
+    });
+  }
+
+  function renderAdminResults(results){
+    var totalRevenue = results.reduce(function(s,r){return s+r.revenue;},0);
+    var totalCount = results.reduce(function(s,r){return s+r.count;},0);
+    var totalQtySum = results.reduce(function(s,r){return s+r.qty;},0);
+    document.getElementById("adminStatRevenue").textContent = adminFmt(totalRevenue);
+    document.getElementById("adminStatCount").textContent = totalCount;
+    document.getElementById("adminStatQty").textContent = totalQtySum;
+    document.getElementById("adminStatBooths").textContent = results.length;
+
+    var wrap = document.getElementById("adminBoothList");
+    if(results.length===0){
+      wrap.innerHTML = '<div class="empty-state">目前沒有已註冊的攤位</div>';
+      return;
+    }
+    var sorted = results.slice().sort(function(a,b){return b.revenue-a.revenue;});
+    wrap.innerHTML = sorted.map(function(r){
+      return '<div class="admin-booth-row">' +
+        '<span class="admin-booth-name">' + escapeHtml(r.name) + ' <span class="hint mono" style="font-weight:400;">' + escapeHtml(r.code) + '</span>' + (r.error ? ' <span class="hint" style="color:var(--danger);">(讀取失敗)</span>' : '') + '</span>' +
+        '<span class="admin-booth-stats">營收 <b>' + adminFmt(r.revenue) + '</b>　筆數 <b>' + r.count + '</b>　數量 <b>' + r.qty + '</b></span>' +
+      '</div>';
+    }).join("");
+  }
+
+  function runAdminQuery(){
+    var startVal = document.getElementById("adminRangeStart").value;
+    var endVal = document.getElementById("adminRangeEnd").value;
+    if(!startVal || !endVal){ toast("請選擇起訖日期"); return; }
+    if(startVal > endVal){ toast("起始日期不能晚於結束日期"); return; }
+    var startMs = new Date(startVal + "T00:00:00").getTime();
+    var endMs = new Date(endVal + "T23:59:59.999").getTime();
+
+    document.getElementById("adminLoadingHint").hidden = false;
+    db.doc(INDEX_PATH).get().then(function(snap){
+      var list = (snap.exists && Array.isArray(snap.data().booths)) ? snap.data().booths.slice() : [];
+      return Promise.all(list.map(function(b){
+        return loadBoothRangeSummary(b.code, startVal, endVal, startMs, endMs).then(function(summary){
+          return Object.assign({code:b.code, name:b.name||b.code}, summary);
+        });
+      }));
+    }).then(function(results){
+      renderAdminResults(results);
+    }).catch(function(e){
+      toast("讀取失敗：" + (e && e.message ? e.message : ""));
+    }).then(function(){
+      document.getElementById("adminLoadingHint").hidden = true;
+    });
+  }
+  document.getElementById("adminQueryBtn").addEventListener("click", runAdminQuery);
+  document.getElementById("adminRangeTodayBtn").addEventListener("click", function(){
+    var today = todayStr();
+    document.getElementById("adminRangeStart").value = today;
+    document.getElementById("adminRangeEnd").value = today;
+    runAdminQuery();
   });
   document.getElementById("gateRegPassword2").addEventListener("keydown", function(e){
     if(e.key === "Enter") document.getElementById("gateRegisterBtn").click();
@@ -2523,7 +2717,9 @@
     auth.onAuthStateChanged(function(user){
       if(handledInitialAuth) return;
       handledInitialAuth = true;
-      if(user && user.email && user.email.indexOf(BOOTH_EMAIL_DOMAIN) === user.email.length - BOOTH_EMAIL_DOMAIN.length){
+      if(user && user.email === ADMIN_EMAIL){
+        enterAdminConsole();
+      } else if(user && user.email && user.email.indexOf(BOOTH_EMAIL_DOMAIN) === user.email.length - BOOTH_EMAIL_DOMAIN.length){
         var code = user.email.slice(0, user.email.length - BOOTH_EMAIL_DOMAIN.length);
         loadBoothAfterAuth(code).catch(function(e){
           showGateMsg("讀取攤位資料失敗：" + (e && e.message ? e.message : ""));
