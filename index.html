@@ -789,6 +789,7 @@
     fbApp = firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
     db = firebase.firestore();
+    db.enablePersistence({synchronizeTabs:true}).catch(function(){ /* offline cache unavailable (private browsing, old browser, etc.) — app still works online */ });
     firebaseReady = true;
   }catch(e){
     firebaseReady = false;
