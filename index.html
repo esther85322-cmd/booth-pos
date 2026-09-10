@@ -839,7 +839,7 @@
   <div class="modal receipt-modal">
     <div class="modal-head"><h3>收攤盤點</h3><button class="modal-close" id="stocktakeModalCloseX">✕</button></div>
     <div class="modal-body">
-      <p class="hint" style="margin:0 0 12px;">「期初」是今天開賣前確認的庫存數量。請在「期末剩餘」欄位輸入收攤後實際盤點剩下的數量，系統會自動算出今天賣出的數量與金額。秤重計價商品不列入盤點。</p>
+      <p class="hint" style="margin:0 0 12px;">「期初」是今天開賣前確認的庫存數量。「期末剩餘」已經預設帶入收銀機刷單後算出的剩餘數量，只要實際清點跟畫面上不一樣的品項，改成真正剩下的數量就好，其他不用動。系統會自動算出今天賣出的數量與金額。秤重計價商品不列入盤點。</p>
       <div id="stocktakeRows"></div>
       <div class="stocktake-totals" id="stocktakeTotals">尚未輸入任何期末數量</div>
     </div>
@@ -2123,33 +2123,29 @@
 
   function updateStocktakeTotals(){
     var rows = document.querySelectorAll("#stocktakeRows .stocktake-row[data-id]");
-    var totalQty=0, totalAmount=0, filled=0;
+    var totalQty=0, totalAmount=0, corrected=0;
     rows.forEach(function(row){
       var input = row.querySelector(".stocktake-closing-input");
       if(input.value==="") return;
-      filled++;
+      var closing = Math.max(0, Math.floor(Number(input.value)||0));
+      if(closing !== Number(row.dataset.prefill)) corrected++;
       var opening = Number(row.dataset.opening);
       var price = Number(row.dataset.price);
-      var closing = Math.max(0, Math.floor(Number(input.value)||0));
       var sold = Math.max(0, opening-closing);
       totalQty += sold; totalAmount += sold*price;
     });
     document.getElementById("stocktakeTotals").textContent =
-      "已填 " + filled + " / " + rows.length + " 項　合計賣出 " + totalQty + " 件　" + fmt(totalAmount);
+      "已修正 " + corrected + " / " + rows.length + " 項（其餘沿用收銀機數字）　合計賣出 " + totalQty + " 件　" + fmt(totalAmount);
   }
 
   function openStocktakeModal(){
     var products = stocktakeableProducts();
     if(products.length===0){ toast("目前沒有可盤點的商品"); return; }
-    var prevClosing = {};
-    if(state.stocktakeResult && state.stocktakeResult.date === todayStr()){
-      state.stocktakeResult.rows.forEach(function(r){ prevClosing[r.id] = r.closing; });
-    }
     var wrap = document.getElementById("stocktakeRows");
     wrap.innerHTML = products.map(function(p){
         var opening = p.openingStock!=null ? p.openingStock : p.stock;
-        var prefill = prevClosing[p.id]!=null ? prevClosing[p.id] : "";
-        return '<div class="stocktake-row" data-id="' + p.id + '" data-opening="' + opening + '" data-price="' + p.price + '">' +
+        var prefill = p.stock; // 預設帶入收銀機刷單後算出的剩餘數量，讓盤點只需修正跟實際不符的品項
+        return '<div class="stocktake-row" data-id="' + p.id + '" data-opening="' + opening + '" data-price="' + p.price + '" data-prefill="' + prefill + '">' +
           '<div class="stk-top"><span class="stk-name">' + escapeHtml(p.name) + '</span><span class="stk-opening">期初 ' + opening + '</span></div>' +
           '<div class="stk-bottom">' +
             '<input class="stocktake-closing-input mono" type="number" inputmode="numeric" min="0" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="剩餘" value="' + prefill + '" />' +
