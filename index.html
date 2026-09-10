@@ -2320,15 +2320,25 @@
 
   function reportPrintHTML(){
     var sales = scopedSales();
-    var revenue = sales.reduce(function(s,x){return s+x.total;},0);
-    var count = sales.length;
-    var qty = totalQty(sales);
+    var corrections = reportScope==="today" ? stocktakeCorrectionRows() : [];
+    var correctionMap = {};
+    corrections.forEach(function(c){ correctionMap[c.name] = c; });
     var qtyMap = buildQtyMap(sales);
+    if(reportScope==="today" && state.stocktakeResult && state.stocktakeResult.date===todayStr()){
+      state.stocktakeResult.rows.forEach(function(row){
+        if(row.soldQty>0){ qtyMap[row.name] = {qty:row.soldQty, revenue:row.amount}; }
+        else { delete qtyMap[row.name]; }
+      });
+    }
     var rows = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
       .sort(function(a,b){return b.qty-a.qty;});
+    var revenue = rows.reduce(function(s,r){return s+r.revenue;},0);
+    var qty = rows.reduce(function(s,r){return s+r.qty;},0);
+    var count = sales.length + (corrections.length>0 ? 1 : 0);
     var rowsHtml = rows.length===0 ? '<div class="receipt-meta">尚無銷售資料</div>' :
       rows.map(function(r){
-        return '<div class="receipt-line"><span>' + escapeHtml(r.name) + '</span><span class="mono">' + r.qty + ' 件・' + fmt(r.revenue) + '</span></div>';
+        var note = correctionMap[r.name] ? ('（含盤點補登 ' + correctionMap[r.name].qty + '件）') : "";
+        return '<div class="receipt-line"><span>' + escapeHtml(r.name) + escapeHtml(note) + '</span><span class="mono">' + r.qty + ' 件・' + fmt(r.revenue) + '</span></div>';
       }).join("");
     return '<div class="receipt-paper" style="max-width:420px;">' +
       '<div class="receipt-shop">' + escapeHtml(state.eventName||"展場攤位") + '</div>' +
