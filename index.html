@@ -230,6 +230,11 @@
   .admin-booth-name{font-weight:600;}
   .admin-booth-stats{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);}
   .admin-booth-stats b{color:var(--ink);font-weight:700;}
+  .admin-booth-filter{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .admin-booth-filter-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
+  .admin-booth-checkbox-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .admin-booth-checkbox{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:13px;cursor:pointer;}
+  .admin-booth-checkbox input{width:auto;}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
   .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
@@ -650,7 +655,7 @@
   </header>
 
   <main>
-    <section class="tab-panel active" style="max-width:900px;margin:0 auto;padding:20px 16px;">
+    <section style="max-width:900px;margin:0 auto;padding:20px 16px;">
       <div class="card">
         <div class="section-head"><span class="section-title">查詢區間</span></div>
         <div class="range-row">
@@ -665,17 +670,30 @@
           <button class="btn btn-sm" id="adminRangeTodayBtn">今日</button>
           <button class="btn btn-primary btn-sm" id="adminQueryBtn">查詢</button>
         </div>
+        <div class="admin-booth-filter">
+          <div class="admin-booth-filter-head">
+            <span class="hint">選擇攤位（會計入下方加總與各項目統計）</span>
+            <button class="btn btn-sm" id="adminSelectAllBtn" type="button">全選 / 取消全選</button>
+          </div>
+          <div id="adminBoothCheckboxes" class="admin-booth-checkbox-list"></div>
+        </div>
         <p class="hint" id="adminLoadingHint" hidden>載入中…</p>
       </div>
 
       <div class="card">
-        <div class="section-head"><span class="section-title">全部攤位加總</span></div>
+        <div class="section-head"><span class="section-title">所選攤位加總</span></div>
         <div class="stat-grid">
           <div class="stat-tile"><div class="stat-tile-label">總營收</div><div class="stat-tile-value mono" id="adminStatRevenue">NT$0</div></div>
           <div class="stat-tile"><div class="stat-tile-label">總交易筆數</div><div class="stat-tile-value mono" id="adminStatCount">0</div></div>
           <div class="stat-tile"><div class="stat-tile-label">總銷售數量</div><div class="stat-tile-value mono" id="adminStatQty">0</div></div>
           <div class="stat-tile"><div class="stat-tile-label">攤位數</div><div class="stat-tile-value mono" id="adminStatBooths">0</div></div>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><span class="section-title">各項目加總（所選攤位）</span></div>
+        <p class="hint" style="margin:0 0 10px;">把勾選的攤位同一項商品的數量與金額加在一起，方便知道例如「白米」「黃豆」這幾個攤位一共賣出幾包、多少錢。</p>
+        <div id="adminItemList"><div class="empty-state">請選擇日期區間後查詢</div></div>
       </div>
 
       <div class="card">
@@ -2594,6 +2612,8 @@
     confirmAction("登出主控台", "確定要登出管理主控台嗎？", exitAdminConsole);
   });
 
+  var adminAllResults = [];
+
   function loadBoothRangeSummary(code, startVal, endVal, startMs, endMs){
     var liveRef = db.doc(DB_COLLECTION + "/" + code);
     var sessionsQuery = db.collection(DB_COLLECTION + "/" + code + "/sessions")
@@ -2612,24 +2632,34 @@
         }
       }
       var filtered = allSales.filter(function(s){ var t = new Date(s.ts).getTime(); return t>=startMs && t<=endMs; });
-      return { revenue: filtered.reduce(function(s,x){return s+x.total;},0), count: filtered.length, qty: totalQty(filtered) };
+      return { revenue: filtered.reduce(function(s,x){return s+x.total;},0), count: filtered.length, qty: totalQty(filtered), sales: filtered };
     }).catch(function(){
-      return { revenue:0, count:0, qty:0, error:true };
+      return { revenue:0, count:0, qty:0, sales:[], error:true };
     });
   }
 
-  function renderAdminResults(results){
-    var totalRevenue = results.reduce(function(s,r){return s+r.revenue;},0);
-    var totalCount = results.reduce(function(s,r){return s+r.count;},0);
-    var totalQtySum = results.reduce(function(s,r){return s+r.qty;},0);
-    document.getElementById("adminStatRevenue").textContent = adminFmt(totalRevenue);
-    document.getElementById("adminStatCount").textContent = totalCount;
-    document.getElementById("adminStatQty").textContent = totalQtySum;
-    document.getElementById("adminStatBooths").textContent = results.length;
+  function getSelectedBoothCodes(){
+    return Array.prototype.map.call(document.querySelectorAll(".admin-booth-check:checked"), function(cb){ return cb.value; });
+  }
 
+  function renderAdminBoothCheckboxes(list){
+    var wrap = document.getElementById("adminBoothCheckboxes");
+    var prevChecked = {};
+    wrap.querySelectorAll(".admin-booth-check").forEach(function(cb){ prevChecked[cb.value] = cb.checked; });
+    var isFirstRender = Object.keys(prevChecked).length === 0;
+    wrap.innerHTML = list.map(function(b){
+      var checked = isFirstRender ? true : (prevChecked.hasOwnProperty(b.code) ? prevChecked[b.code] : true);
+      return '<label class="admin-booth-checkbox"><input type="checkbox" class="admin-booth-check" value="' + escapeHtml(b.code) + '"' + (checked?' checked':'') + ' /> ' + escapeHtml(b.name||b.code) + '</label>';
+    }).join("");
+    wrap.querySelectorAll(".admin-booth-check").forEach(function(cb){
+      cb.addEventListener("change", applyAdminFilterAndRender);
+    });
+  }
+
+  function renderAdminBoothList(results){
     var wrap = document.getElementById("adminBoothList");
     if(results.length===0){
-      wrap.innerHTML = '<div class="empty-state">目前沒有已註冊的攤位</div>';
+      wrap.innerHTML = '<div class="empty-state">尚未勾選任何攤位</div>';
       return;
     }
     var sorted = results.slice().sort(function(a,b){return b.revenue-a.revenue;});
@@ -2640,6 +2670,41 @@
       '</div>';
     }).join("");
   }
+
+  function renderAdminItemTotals(results){
+    var allSales = [];
+    results.forEach(function(r){ if(Array.isArray(r.sales)) allSales = allSales.concat(r.sales); });
+    var qtyMap = buildQtyMap(allSales);
+    var ranked = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
+      .sort(function(a,b){return b.qty-a.qty;});
+    var wrap = document.getElementById("adminItemList");
+    wrap.innerHTML = ranked.length===0 ? '<div class="empty-state">目前沒有銷售紀錄</div>' :
+      ranked.map(function(r){
+        return '<div class="rank-row"><span class="rank-name">' + escapeHtml(r.name) + '</span>' +
+          '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + adminFmt(r.revenue) + '</span></div></div>';
+      }).join("");
+  }
+
+  function applyAdminFilterAndRender(){
+    var selected = getSelectedBoothCodes();
+    var filtered = adminAllResults.filter(function(r){ return selected.indexOf(r.code) > -1; });
+    var totalRevenue = filtered.reduce(function(s,r){return s+r.revenue;},0);
+    var totalCount = filtered.reduce(function(s,r){return s+r.count;},0);
+    var totalQtySum = filtered.reduce(function(s,r){return s+r.qty;},0);
+    document.getElementById("adminStatRevenue").textContent = adminFmt(totalRevenue);
+    document.getElementById("adminStatCount").textContent = totalCount;
+    document.getElementById("adminStatQty").textContent = totalQtySum;
+    document.getElementById("adminStatBooths").textContent = filtered.length;
+    renderAdminBoothList(filtered);
+    renderAdminItemTotals(filtered);
+  }
+
+  document.getElementById("adminSelectAllBtn").addEventListener("click", function(){
+    var boxes = document.querySelectorAll(".admin-booth-check");
+    var allChecked = Array.prototype.every.call(boxes, function(cb){ return cb.checked; });
+    boxes.forEach(function(cb){ cb.checked = !allChecked; });
+    applyAdminFilterAndRender();
+  });
 
   function runAdminQuery(){
     var startVal = document.getElementById("adminRangeStart").value;
@@ -2652,13 +2717,15 @@
     document.getElementById("adminLoadingHint").hidden = false;
     db.doc(INDEX_PATH).get().then(function(snap){
       var list = (snap.exists && Array.isArray(snap.data().booths)) ? snap.data().booths.slice() : [];
+      renderAdminBoothCheckboxes(list);
       return Promise.all(list.map(function(b){
         return loadBoothRangeSummary(b.code, startVal, endVal, startMs, endMs).then(function(summary){
           return Object.assign({code:b.code, name:b.name||b.code}, summary);
         });
       }));
     }).then(function(results){
-      renderAdminResults(results);
+      adminAllResults = results;
+      applyAdminFilterAndRender();
     }).catch(function(e){
       toast("讀取失敗：" + (e && e.message ? e.message : ""));
     }).then(function(){
