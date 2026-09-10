@@ -1563,10 +1563,12 @@
       return;
     }
     var visible = state.products.filter(function(p){
+      if(p.category === PRODUCE_CATEGORY && !p.produceActive) return false;
       return !productsCategoryFilter || (p.category||"") === productsCategoryFilter;
     });
     if(visible.length===0){
-      wrap.innerHTML = '<div class="empty-state">這個分類目前沒有商品</div>';
+      var isProduceFilter = productsCategoryFilter === PRODUCE_CATEGORY;
+      wrap.innerHTML = '<div class="empty-state">' + (isProduceFilter ? '今天還沒有選生鮮蔬菜，點右上角「生鮮蔬菜今日備貨」選擇今天有的菜' : '這個分類目前沒有商品') + '</div>';
       return;
     }
     var favNames = loadFavorites().map(function(f){ return f.name; });
@@ -1757,7 +1759,7 @@
   function openProduceModal(){
     var all = produceProducts();
     if(all.length===0){ toast("目前沒有「" + PRODUCE_CATEGORY + "」分類的商品"); return; }
-    produceSelectedIds = new Set(all.filter(function(p){ return p.stock > 0; }).map(function(p){ return p.id; }));
+    produceSelectedIds = new Set(all.filter(function(p){ return p.produceActive; }).map(function(p){ return p.id; }));
     produceSearchTerm = "";
     document.getElementById("produceSearchInput").value = "";
     document.getElementById("produceStepSelect").hidden = false;
@@ -1817,9 +1819,10 @@
       var qty = Math.max(0, Math.floor(Number(row.querySelector(".produce-qty-input").value)||0));
       p.stock = qty;
       p.openingStock = qty;
+      p.produceActive = true;
     });
     produceProducts().forEach(function(p){
-      if(!produceSelectedIds.has(p.id)){ p.stock = 0; }
+      if(!produceSelectedIds.has(p.id)){ p.stock = 0; p.produceActive = false; }
     });
     markDirty(); saveState(); renderProducts(); renderProductGrid();
     closeProduceModal();
