@@ -208,6 +208,9 @@
   .tx-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;text-align:center;width:fit-content;}
   .tx-badge.cash{background:var(--accent-soft);color:var(--accent-strong);}
   .tx-badge.mobile{background:var(--amber-soft);color:var(--amber);}
+  .tx-badge.stocktake{background:var(--surface-3);color:var(--ink-soft);border:1px dashed var(--line-strong);}
+  .tx-row.corrected{background:var(--surface-2);border-radius:var(--radius-m);}
+  .rank-adj-note{font-size:11px;color:var(--amber);font-weight:500;margin-left:6px;}
   .tx-total{font-family:var(--font-mono);text-align:right;font-weight:600;}
   .tx-delete{width:26px;height:26px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--ink-faint);cursor:pointer;}
   .tx-delete:hover{color:var(--danger);background:var(--danger-soft);}
@@ -2051,23 +2054,48 @@
     document.getElementById("legendCash").textContent = fmt(cashTotal);
     document.getElementById("legendMobile").textContent = fmt(mobileTotal);
 
+    var corrections = reportScope==="today" ? stocktakeCorrectionRows() : [];
+    var correctionMap = {};
+    corrections.forEach(function(c){ correctionMap[c.name] = c; });
+
     var qtyMap = buildQtyMap(sales);
+    if(reportScope==="today" && state.stocktakeResult && state.stocktakeResult.date===todayStr()){
+      state.stocktakeResult.rows.forEach(function(row){
+        if(row.soldQty>0){ qtyMap[row.name] = {qty:row.soldQty, revenue:row.amount}; }
+        else { delete qtyMap[row.name]; }
+      });
+    }
     var ranked = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
       .sort(function(a,b){return b.qty-a.qty;});
     document.getElementById("rankSectionTitle").textContent = scopeLabel() + "賣出各項目總數";
     var rankList = document.getElementById("rankList");
     rankList.innerHTML = ranked.length===0 ? '<div class="empty-state">' + scopeLabel() + '尚無銷售紀錄</div>' :
       ranked.map(function(r){
+        var c = correctionMap[r.name];
+        var note = c ? ('<span class="rank-adj-note">(含盤點補登 ' + c.qty + ' 件)</span>') : "";
         return '<div class="rank-row">' +
-          '<span class="rank-name">' + escapeHtml(r.name) + '</span>' +
+          '<span class="rank-name">' + escapeHtml(r.name) + note + '</span>' +
           '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + fmt(r.revenue) + '</span></div>' +
         '</div>';
       }).join("");
 
     var txList = document.getElementById("txList");
     var sorted = sales.slice().sort(function(a,b){ return new Date(b.ts)-new Date(a.ts); });
-    txList.innerHTML = sorted.length===0 ? '<div class="empty-state">' + scopeLabel() + '尚無交易紀錄</div>' :
-      sorted.map(function(s){
+    var correctionTotal = corrections.reduce(function(s,c){return s+c.revenue;},0);
+    var correctionRowHtml = "";
+    if(corrections.length>0){
+      var savedAt = new Date(state.stocktakeResult.savedAt);
+      var timeLabel = savedAt.toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+      var summary = corrections.map(function(c){ return c.name + "×" + c.qty; }).join("、");
+      correctionRowHtml = '<div class="tx-row corrected">' +
+        '<span class="tx-time">' + timeLabel + '</span>' +
+        '<span class="tx-items" title="' + escapeHtml(summary) + '">' + escapeHtml(summary) + '</span>' +
+        '<span class="tx-badge stocktake">盤點補登</span>' +
+        '<span class="tx-total mono">' + fmt(correctionTotal) + '</span>' +
+        '<span></span>' +
+      '</div>';
+    }
+    var txRowsHtml = sorted.map(function(s){
         var itemsSummary = itemsSummaryOf(s.items);
         var timeLabel = new Date(s.ts).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
         return '<div class="tx-row" data-id="' + s.id + '">' +
@@ -2078,7 +2106,8 @@
           '<button class="tx-delete" data-act="del" title="刪除並回補庫存">✕</button>' +
         '</div>';
       }).join("");
-    txList.querySelectorAll(".tx-row").forEach(function(row){
+    txList.innerHTML = (correctionRowHtml + txRowsHtml) || ('<div class="empty-state">' + scopeLabel() + '尚無交易紀錄</div>');
+    txList.querySelectorAll(".tx-row[data-id]").forEach(function(row){
       var id = row.dataset.id;
       row.querySelector('[data-act="del"]').addEventListener("click", function(){
         confirmAction("刪除交易紀錄", "確定要刪除這筆交易嗎？商品庫存將會回補。", function(){
@@ -2106,6 +2135,24 @@
   /* ---------- End-of-day stocktake reconciliation ---------- */
   function stocktakeableProducts(){
     return state.products.filter(function(p){ return p.pricingType !== "weighed" && (p.openingStock||0) > 0; });
+  }
+
+  // Items where today's stocktake found more sold than what was actually keyed into the register
+  // (i.e. cash sales that never got rung up). Positive-delta rows only.
+  function stocktakeCorrectionRows(){
+    var r = state.stocktakeResult;
+    if(!r || r.date !== todayStr()) return [];
+    var keyedMap = buildQtyMap(state.sales.filter(function(s){ return isToday(s.ts); }));
+    var out = [];
+    r.rows.forEach(function(row){
+      var keyed = keyedMap[row.name] || {qty:0, revenue:0};
+      var deltaQty = row.soldQty - keyed.qty;
+      var deltaRevenue = row.amount - keyed.revenue;
+      if(deltaQty > 0){
+        out.push({name:row.name, qty:deltaQty, revenue:deltaRevenue});
+      }
+    });
+    return out;
   }
 
   function updateStocktakeRow(row){
@@ -2189,7 +2236,7 @@
     var totalQty = resultRows.reduce(function(s,r){return s+r.soldQty;},0);
     var totalAmount = resultRows.reduce(function(s,r){return s+r.amount;},0);
     state.stocktakeResult = { date: todayStr(), savedAt: new Date().toISOString(), rows: resultRows, totalQty: totalQty, totalAmount: totalAmount };
-    markDirty(); saveState(); renderProducts(); renderProductGrid(); renderStocktakeSummary();
+    markDirty(); saveState(); renderProducts(); renderProductGrid(); renderStocktakeSummary(); renderReports();
     closeStocktakeModal();
     toast("盤點結算已儲存");
   });
@@ -2251,7 +2298,7 @@
   document.getElementById("clearStocktakeBtn").addEventListener("click", function(){
     confirmAction("清除本次盤點紀錄", "確定要清除今天的盤點結算結果嗎？商品目前的庫存數字不會被還原，只會清掉這份結算紀錄；之後可以重新做一次盤點。", function(){
       state.stocktakeResult = null;
-      markDirty(); saveState(); renderStocktakeSummary();
+      markDirty(); saveState(); renderStocktakeSummary(); renderReports();
       toast("已清除本次盤點紀錄");
     });
   });
