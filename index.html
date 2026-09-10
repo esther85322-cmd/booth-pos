@@ -573,6 +573,8 @@
         <div id="stocktakeSummary"><div class="empty-state">今天還沒有盤點紀錄</div></div>
         <div class="export-row" id="stocktakeExportRow" hidden>
           <button class="btn btn-sm" id="exportStocktakeBtn">匯出盤點結算表 (Excel)</button>
+          <button class="btn btn-sm" id="redoStocktakeBtn">重新盤點 / 修改</button>
+          <button class="btn btn-sm btn-danger" id="clearStocktakeBtn">清除本次盤點紀錄</button>
         </div>
       </div>
 
@@ -2247,6 +2249,15 @@
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "盤點結算表");
     XLSX.writeFile(wb, "盤點結算表-" + r.date + ".xlsx");
+  });
+
+  document.getElementById("redoStocktakeBtn").addEventListener("click", openStocktakeModal);
+  document.getElementById("clearStocktakeBtn").addEventListener("click", function(){
+    confirmAction("清除本次盤點紀錄", "確定要清除今天的盤點結算結果嗎？商品目前的庫存數字不會被還原，只會清掉這份結算紀錄；之後可以重新做一次盤點。", function(){
+      state.stocktakeResult = null;
+      markDirty(); saveState(); renderStocktakeSummary();
+      toast("已清除本次盤點紀錄");
+    });
   });
 
   document.getElementById("exportProductsBtn").addEventListener("click", function(){
