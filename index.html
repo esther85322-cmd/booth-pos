@@ -235,6 +235,15 @@
   .admin-booth-checkbox-list{display:flex;flex-wrap:wrap;gap:8px;}
   .admin-booth-checkbox{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:13px;cursor:pointer;}
   .admin-booth-checkbox input{width:auto;}
+
+  /* Produce (fresh vegetable) daily setup */
+  .produce-check-list{display:flex;flex-wrap:wrap;gap:8px;max-height:360px;overflow-y:auto;padding:2px;}
+  .produce-check-item{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:13px;cursor:pointer;}
+  .produce-check-item input{width:auto;}
+  .produce-check-item.checked{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:600;}
+  .produce-qty-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .produce-qty-row:last-child{border-bottom:none;}
+  .produce-qty-input{width:84px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
   .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
@@ -507,6 +516,7 @@
           <span class="section-title">商品管理</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" id="importFavoritesBtn">從常用商品匯入</button>
+            <button class="btn" id="openProduceModalBtn">生鮮蔬菜今日備貨</button>
             <button class="btn btn-primary" id="addProductBtn">＋ 新增商品</button>
           </div>
         </div>
@@ -832,6 +842,33 @@
     <div class="modal-actions">
       <button class="btn btn-sm" id="stocktakeModalCancel">取消</button>
       <button class="btn btn-primary btn-sm" id="stocktakeModalSave">儲存並產生結算表</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="produceModal" hidden>
+  <div class="modal receipt-modal">
+    <div class="modal-head"><h3>生鮮蔬菜今日備貨</h3><button class="modal-close" id="produceModalCloseX">✕</button></div>
+    <div class="modal-body">
+      <div id="produceStepSelect">
+        <p class="hint" style="margin:0 0 12px;">先勾選今天有進貨、要上架的品項，下一步再輸入各項的數量。沒有勾選的品項今天會顯示已售完。</p>
+        <input id="produceSearchInput" class="search-input" placeholder="搜尋菜名…" style="margin-bottom:10px;" />
+        <div class="admin-booth-filter-head" style="margin-bottom:8px;">
+          <span class="hint" id="produceSelectedCount">已選 0 項</span>
+          <button class="btn btn-sm" id="produceSelectAllBtn" type="button">全選 / 取消全選</button>
+        </div>
+        <div id="produceCheckList" class="produce-check-list"></div>
+      </div>
+      <div id="produceStepQty" hidden>
+        <p class="hint" style="margin:0 0 12px;">輸入今天每項的進貨數量。</p>
+        <div id="produceQtyList"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="produceModalCancel">取消</button>
+      <button class="btn btn-sm" id="produceBackBtn" hidden>‹ 上一步</button>
+      <button class="btn btn-primary btn-sm" id="produceNextBtn">下一步</button>
+      <button class="btn btn-primary btn-sm" id="produceSaveBtn" hidden>儲存今日庫存</button>
     </div>
   </div>
 </div>
@@ -1681,6 +1718,111 @@
     markDirty(); saveState(); renderProducts(); renderProductGrid(); renderCart();
     closeProductModal();
     toast(editingProductId ? "已更新商品" : "已新增商品");
+  });
+
+  /* ---------- Fresh produce (生鮮蔬菜) daily setup: pick today's items, then enter quantities ---------- */
+  var PRODUCE_CATEGORY = "生鮮蔬菜";
+  var produceSelectedIds = null;
+  var produceSearchTerm = "";
+
+  function produceProducts(){
+    return state.products.filter(function(p){ return p.category === PRODUCE_CATEGORY; });
+  }
+
+  function renderProduceCheckList(){
+    var term = produceSearchTerm.trim();
+    var list = produceProducts().filter(function(p){ return !term || p.name.indexOf(term) > -1; });
+    var wrap = document.getElementById("produceCheckList");
+    wrap.innerHTML = list.length===0 ? '<div class="empty-state">找不到符合的品項</div>' : list.map(function(p){
+      var checked = produceSelectedIds.has(p.id);
+      return '<label class="produce-check-item' + (checked?' checked':'') + '" data-id="' + p.id + '">' +
+        '<input type="checkbox" class="produce-check-box"' + (checked?' checked':'') + ' /> ' + escapeHtml(p.name) +
+      '</label>';
+    }).join("");
+    wrap.querySelectorAll(".produce-check-item").forEach(function(row){
+      var id = row.dataset.id;
+      row.querySelector(".produce-check-box").addEventListener("change", function(e){
+        if(e.target.checked){ produceSelectedIds.add(id); } else { produceSelectedIds.delete(id); }
+        row.classList.toggle("checked", e.target.checked);
+        updateProduceSelectedCount();
+      });
+    });
+  }
+
+  function updateProduceSelectedCount(){
+    document.getElementById("produceSelectedCount").textContent = "已選 " + produceSelectedIds.size + " 項";
+  }
+
+  function openProduceModal(){
+    var all = produceProducts();
+    if(all.length===0){ toast("目前沒有「" + PRODUCE_CATEGORY + "」分類的商品"); return; }
+    produceSelectedIds = new Set(all.filter(function(p){ return p.stock > 0; }).map(function(p){ return p.id; }));
+    produceSearchTerm = "";
+    document.getElementById("produceSearchInput").value = "";
+    document.getElementById("produceStepSelect").hidden = false;
+    document.getElementById("produceStepQty").hidden = true;
+    document.getElementById("produceBackBtn").hidden = true;
+    document.getElementById("produceNextBtn").hidden = false;
+    document.getElementById("produceSaveBtn").hidden = true;
+    renderProduceCheckList();
+    updateProduceSelectedCount();
+    document.getElementById("produceModal").hidden = false;
+  }
+  document.getElementById("openProduceModalBtn").addEventListener("click", openProduceModal);
+  function closeProduceModal(){ document.getElementById("produceModal").hidden = true; }
+  document.getElementById("produceModalCloseX").addEventListener("click", closeProduceModal);
+  document.getElementById("produceModalCancel").addEventListener("click", closeProduceModal);
+
+  document.getElementById("produceSearchInput").addEventListener("input", function(e){
+    produceSearchTerm = e.target.value;
+    renderProduceCheckList();
+  });
+  document.getElementById("produceSelectAllBtn").addEventListener("click", function(){
+    var boxes = document.querySelectorAll(".produce-check-box");
+    var allChecked = boxes.length>0 && Array.prototype.every.call(boxes, function(cb){ return cb.checked; });
+    boxes.forEach(function(cb){ cb.checked = !allChecked; cb.dispatchEvent(new Event("change", {bubbles:true})); });
+  });
+
+  document.getElementById("produceNextBtn").addEventListener("click", function(){
+    if(produceSelectedIds.size===0){ toast("請至少勾選一項"); return; }
+    var wrap = document.getElementById("produceQtyList");
+    var selected = produceProducts().filter(function(p){ return produceSelectedIds.has(p.id); });
+    wrap.innerHTML = selected.map(function(p){
+      var prefill = p.stock > 0 ? p.stock : "";
+      return '<div class="produce-qty-row" data-id="' + p.id + '">' +
+        '<span>' + escapeHtml(p.name) + '</span>' +
+        '<input class="produce-qty-input mono" type="number" inputmode="numeric" min="0" placeholder="數量" value="' + prefill + '" />' +
+      '</div>';
+    }).join("");
+    document.getElementById("produceStepSelect").hidden = true;
+    document.getElementById("produceStepQty").hidden = false;
+    document.getElementById("produceBackBtn").hidden = false;
+    document.getElementById("produceNextBtn").hidden = true;
+    document.getElementById("produceSaveBtn").hidden = false;
+  });
+  document.getElementById("produceBackBtn").addEventListener("click", function(){
+    document.getElementById("produceStepSelect").hidden = false;
+    document.getElementById("produceStepQty").hidden = true;
+    document.getElementById("produceBackBtn").hidden = true;
+    document.getElementById("produceNextBtn").hidden = false;
+    document.getElementById("produceSaveBtn").hidden = true;
+  });
+
+  document.getElementById("produceSaveBtn").addEventListener("click", function(){
+    var rows = document.querySelectorAll("#produceQtyList .produce-qty-row");
+    rows.forEach(function(row){
+      var p = state.products.find(function(x){return x.id===row.dataset.id;});
+      if(!p) return;
+      var qty = Math.max(0, Math.floor(Number(row.querySelector(".produce-qty-input").value)||0));
+      p.stock = qty;
+      p.openingStock = qty;
+    });
+    produceProducts().forEach(function(p){
+      if(!produceSelectedIds.has(p.id)){ p.stock = 0; }
+    });
+    markDirty(); saveState(); renderProducts(); renderProductGrid();
+    closeProduceModal();
+    toast("今日生鮮蔬菜庫存已更新");
   });
 
   /* ---------- Favorite products (device-local, reusable across booths) ---------- */
