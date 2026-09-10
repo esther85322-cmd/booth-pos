@@ -589,7 +589,6 @@
         </div>
         <div class="export-row">
           <button class="btn btn-sm" id="printReportBtn">列印銷售總表</button>
-          <button class="btn btn-sm" id="exportTxBtn">匯出交易紀錄 (CSV)</button>
           <button class="btn btn-sm" id="exportProductsBtn">匯出商品清單 (CSV)</button>
         </div>
       </div>
@@ -2101,21 +2100,6 @@
     return v;
   }
   function toCsv(rows){ return "﻿" + rows.map(function(r){return r.map(toCsvCell).join(",");}).join("\r\n"); }
-
-  document.getElementById("exportTxBtn").addEventListener("click", function(){
-    var sales = scopedSales().slice().sort(function(a,b){return new Date(a.ts)-new Date(b.ts);});
-    var rows = [["時間","商品明細","付款方式","收款","找零","總計"]];
-    sales.forEach(function(s){
-      rows.push([
-        new Date(s.ts).toLocaleString("zh-TW"),
-        itemsSummaryOf(s.items),
-        s.method==="cash"?"現金":"行動支付",
-        s.received, s.change, s.total
-      ]);
-    });
-    var fname = "交易紀錄-" + scopeLabel().replace(/[\/\\?%*:|"<>~]/g,"-") + "-" + new Date().toISOString().slice(0,10) + ".csv";
-    saveFile(fname, toCsv(rows));
-  });
 
   /* ---------- End-of-day stocktake reconciliation ---------- */
   function stocktakeableProducts(){
