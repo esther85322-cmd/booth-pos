@@ -193,14 +193,12 @@
   .split-legend .lg-cash::before{background:var(--accent);}
   .split-legend .lg-mobile::before{background:var(--amber);}
 
-  .rank-row{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;padding:7px 0;}
-  .rank-idx{color:var(--ink-faint);font-family:var(--font-mono);font-size:12.5px;}
+  .rank-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .rank-row:last-child{border-bottom:none;}
   .rank-name{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .rank-bar-track{grid-column:1/-1;height:6px;background:var(--surface-3);border-radius:99px;overflow:hidden;margin-top:2px;}
-  .rank-bar-fill{height:100%;background:var(--accent);}
-  .rank-stats{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
-  .rank-qty{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);text-align:right;white-space:nowrap;}
-  .rank-revenue{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--accent-strong);text-align:right;white-space:nowrap;}
+  .rank-stats{display:flex;align-items:baseline;gap:10px;flex:none;}
+  .rank-qty{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);white-space:nowrap;}
+  .rank-revenue{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--accent-strong);white-space:nowrap;}
 
   .tx-row{display:grid;grid-template-columns:110px 1fr 90px 90px 34px;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);font-size:13px;}
   .tx-row.head{color:var(--ink-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;}
@@ -561,7 +559,7 @@
       </div>
 
       <div class="card">
-        <div class="section-head"><span class="section-title">熱銷商品</span></div>
+        <div class="section-head"><span class="section-title" id="rankSectionTitle">今日賣出各項目總數</span></div>
         <div id="rankList"></div>
       </div>
 
@@ -1856,16 +1854,14 @@
 
     var qtyMap = buildQtyMap(sales);
     var ranked = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
-      .sort(function(a,b){return b.qty-a.qty;}).slice(0,5);
-    var maxQty = ranked.length? ranked[0].qty : 1;
+      .sort(function(a,b){return b.qty-a.qty;});
+    document.getElementById("rankSectionTitle").textContent = scopeLabel() + "賣出各項目總數";
     var rankList = document.getElementById("rankList");
     rankList.innerHTML = ranked.length===0 ? '<div class="empty-state">' + scopeLabel() + '尚無銷售紀錄</div>' :
-      ranked.map(function(r,i){
+      ranked.map(function(r){
         return '<div class="rank-row">' +
-          '<span class="rank-idx">' + (i+1) + '</span>' +
           '<span class="rank-name">' + escapeHtml(r.name) + '</span>' +
           '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + fmt(r.revenue) + '</span></div>' +
-          '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:' + (r.qty/maxQty*100) + '%"></div></div>' +
         '</div>';
       }).join("");
 
@@ -2198,8 +2194,7 @@
     var qty = totalQty(sales);
     var qtyMap = buildQtyMap(sales);
     var ranked = Object.keys(qtyMap).map(function(name){return {name:name, qty:qtyMap[name].qty, revenue:qtyMap[name].revenue};})
-      .sort(function(a,b){return b.qty-a.qty;}).slice(0,5);
-    var maxQty = ranked.length ? ranked[0].qty : 1;
+      .sort(function(a,b){return b.qty-a.qty;});
     var sorted = sales.slice().sort(function(a,b){ return new Date(b.ts)-new Date(a.ts); });
 
     var html = '<div class="stat-grid">' +
@@ -2207,11 +2202,10 @@
         '<div class="stat-tile"><div class="stat-tile-label">交易筆數</div><div class="stat-tile-value mono">' + count + '</div></div>' +
         '<div class="stat-tile"><div class="stat-tile-label">銷售總數量</div><div class="stat-tile-value mono">' + qty + '</div></div>' +
       '</div>';
-    html += '<div class="section-title" style="margin:16px 0 8px;font-size:15px;">熱銷商品</div>';
-    html += ranked.length===0 ? '<div class="empty-state">當天無銷售</div>' : ranked.map(function(r,i){
-      return '<div class="rank-row"><span class="rank-idx">' + (i+1) + '</span><span class="rank-name">' + escapeHtml(r.name) + '</span>' +
-        '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + fmt(r.revenue) + '</span></div>' +
-        '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:' + (r.qty/maxQty*100) + '%"></div></div></div>';
+    html += '<div class="section-title" style="margin:16px 0 8px;font-size:15px;">當天賣出各項目總數</div>';
+    html += ranked.length===0 ? '<div class="empty-state">當天無銷售</div>' : ranked.map(function(r){
+      return '<div class="rank-row"><span class="rank-name">' + escapeHtml(r.name) + '</span>' +
+        '<div class="rank-stats"><span class="rank-qty">' + r.qty + ' 件</span><span class="rank-revenue">' + fmt(r.revenue) + '</span></div></div>';
     }).join("");
     html += '<div class="section-title" style="margin:16px 0 8px;font-size:15px;">交易紀錄</div>';
     html += sorted.length===0 ? '<div class="empty-state">當天無交易</div>' : sorted.map(function(s){
