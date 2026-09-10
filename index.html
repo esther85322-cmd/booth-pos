@@ -1112,12 +1112,13 @@
     var grid = document.getElementById("productGrid");
     var items = state.products.filter(function(p){
       if(checkoutCategoryFilter && (p.category||"") !== checkoutCategoryFilter) return false;
+      if(p.pricingType!=="weighed" && p.stock<=0) return false;
       if(!q) return true;
       return p.name.toLowerCase().indexOf(q)>-1 || (p.sku||"").toLowerCase().indexOf(q)>-1;
     });
     document.getElementById("sampleBadge").hidden = !state.isSample;
     if(items.length===0){
-      grid.innerHTML = '<div class="empty-state">' + (state.products.length===0 ? "尚未建立商品，請至「商品」頁新增" : "找不到符合的商品") + "</div>";
+      grid.innerHTML = '<div class="empty-state">' + (state.products.length===0 ? "尚未建立商品，請至「商品」頁新增" : "目前沒有庫存可販售的商品") + "</div>";
       return;
     }
     grid.innerHTML = items.map(function(p){
