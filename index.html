@@ -244,12 +244,14 @@
   .produce-check-item{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:13px;cursor:pointer;}
   .produce-check-item input{width:auto;}
   .produce-check-item.checked{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:600;}
+  .produce-check-cat{font-size:10.5px;color:var(--ink-faint);font-weight:400;}
   .produce-qty-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
   .produce-qty-row:last-child{border-bottom:none;}
   .produce-qty-input{width:84px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
   .produce-add-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line-strong);}
-  .produce-add-row input{flex:1 1 140px;padding:9px 11px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:16px;}
+  .produce-add-row input,.produce-add-row select{flex:1 1 140px;padding:9px 11px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:16px;}
   .produce-add-row #produceNewPrice{flex:0 1 90px;}
+  .produce-add-row #produceNewCategory{flex:0 1 130px;}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
   .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
@@ -542,7 +544,7 @@
           <span class="section-title">商品管理</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" id="importFavoritesBtn">從常用商品匯入</button>
-            <button class="btn" id="openProduceModalBtn">生鮮蔬菜今日備貨</button>
+            <button class="btn" id="openProduceModalBtn">今日上架商品</button>
             <button class="btn btn-primary" id="addProductBtn">＋ 新增商品</button>
           </div>
         </div>
@@ -875,11 +877,11 @@
 
 <div class="modal-overlay" id="produceModal" hidden>
   <div class="modal receipt-modal">
-    <div class="modal-head"><h3>生鮮蔬菜今日備貨</h3><button class="modal-close" id="produceModalCloseX">✕</button></div>
+    <div class="modal-head"><h3>今日上架商品</h3><button class="modal-close" id="produceModalCloseX">✕</button></div>
     <div class="modal-body">
       <div id="produceStepSelect">
-        <p class="hint" style="margin:0 0 12px;">先勾選今天有進貨、要上架的品項，下一步再輸入各項的數量。沒有勾選的品項今天會顯示已售完。</p>
-        <input id="produceSearchInput" class="search-input" placeholder="搜尋菜名…" style="margin-bottom:10px;" />
+        <p class="hint" style="margin:0 0 12px;">先勾選今天有進貨、要上架的品項（生鮮蔬菜、麵包、蛋糕、肉蛋製品），下一步再輸入各項的數量。沒有勾選的品項今天會顯示已售完。</p>
+        <input id="produceSearchInput" class="search-input" placeholder="搜尋商品名稱…" style="margin-bottom:10px;" />
         <div class="admin-booth-filter-head" style="margin-bottom:8px;">
           <span class="hint" id="produceSelectedCount">已選 0 項</span>
           <button class="btn btn-sm" id="produceSelectAllBtn" type="button">全選 / 取消全選</button>
@@ -888,6 +890,7 @@
         <div class="produce-add-row">
           <input id="produceNewName" placeholder="新品項名稱" autocomplete="off" />
           <input id="produceNewPrice" type="number" inputmode="decimal" min="0" placeholder="單價" autocomplete="off" />
+          <select id="produceNewCategory"></select>
           <button class="btn btn-sm" id="produceAddNewBtn" type="button">＋ 新增品項</button>
         </div>
       </div>
@@ -1630,12 +1633,12 @@
       return;
     }
     var visible = state.products.filter(function(p){
-      if(p.category === PRODUCE_CATEGORY && !p.produceActive) return false;
+      if(ROTATING_CATEGORIES.indexOf(p.category)>-1 && !p.produceActive) return false;
       return !productsCategoryFilter || (p.category||"") === productsCategoryFilter;
     });
     if(visible.length===0){
-      var isProduceFilter = productsCategoryFilter === PRODUCE_CATEGORY;
-      wrap.innerHTML = '<div class="empty-state">' + (isProduceFilter ? '今天還沒有選生鮮蔬菜，點右上角「生鮮蔬菜今日備貨」選擇今天有的菜' : '這個分類目前沒有商品') + '</div>';
+      var isRotatingFilter = ROTATING_CATEGORIES.indexOf(productsCategoryFilter)>-1;
+      wrap.innerHTML = '<div class="empty-state">' + (isRotatingFilter ? '今天還沒有選要上架的品項，點右上角「今日上架商品」設定' : '這個分類目前沒有商品') + '</div>';
       return;
     }
     var favNames = loadFavorites().map(function(f){ return f.name; });
@@ -1790,13 +1793,13 @@
     toast(editingProductId ? "已更新商品" : "已新增商品");
   });
 
-  /* ---------- Fresh produce (生鮮蔬菜) daily setup: pick today's items, then enter quantities ---------- */
-  var PRODUCE_CATEGORY = "生鮮蔬菜";
+  /* ---------- Rotating-stock categories (生鮮蔬菜/麵包/蛋糕/肉蛋製品): pick today's items, then enter quantities ---------- */
+  var ROTATING_CATEGORIES = ["生鮮蔬菜", "麵包", "蛋糕", "肉蛋製品"];
   var produceSelectedIds = null;
   var produceSearchTerm = "";
 
   function produceProducts(){
-    return state.products.filter(function(p){ return p.category === PRODUCE_CATEGORY; });
+    return state.products.filter(function(p){ return ROTATING_CATEGORIES.indexOf(p.category) > -1; });
   }
 
   function renderProduceCheckList(){
@@ -1806,7 +1809,7 @@
     wrap.innerHTML = list.length===0 ? '<div class="empty-state">找不到符合的品項</div>' : list.map(function(p){
       var checked = produceSelectedIds.has(p.id);
       return '<label class="produce-check-item' + (checked?' checked':'') + '" data-id="' + p.id + '">' +
-        '<input type="checkbox" class="produce-check-box"' + (checked?' checked':'') + ' /> ' + escapeHtml(p.name) +
+        '<input type="checkbox" class="produce-check-box"' + (checked?' checked':'') + ' /> ' + escapeHtml(p.name) + '<span class="produce-check-cat">' + escapeHtml(p.category||"") + '</span>' +
       '</label>';
     }).join("");
     wrap.querySelectorAll(".produce-check-item").forEach(function(row){
@@ -1825,10 +1828,11 @@
 
   function openProduceModal(){
     var all = produceProducts();
-    if(all.length===0){ toast("目前沒有「" + PRODUCE_CATEGORY + "」分類的商品"); return; }
+    if(all.length===0){ toast("目前沒有可上架的商品分類"); return; }
     produceSelectedIds = new Set(all.filter(function(p){ return p.produceActive; }).map(function(p){ return p.id; }));
     produceSearchTerm = "";
     document.getElementById("produceSearchInput").value = "";
+    document.getElementById("produceNewCategory").innerHTML = ROTATING_CATEGORIES.map(function(c){ return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; }).join("");
     document.getElementById("produceStepSelect").hidden = false;
     document.getElementById("produceStepQty").hidden = true;
     document.getElementById("produceBackBtn").hidden = true;
@@ -1861,7 +1865,8 @@
     var dup = produceProducts().find(function(p){ return p.name === name; });
     if(dup){ toast("「" + name + "」已經在清單裡了"); return; }
     var price = Math.max(0, Number(priceInput.value)||0);
-    var p = { id:genId(), name:name, price:price, stock:0, openingStock:0, defaultStock:0, sku:"", category:PRODUCE_CATEGORY, pricingType:"unit", bundleQty:null, bundlePrice:null, produceActive:false };
+    var category = document.getElementById("produceNewCategory").value || ROTATING_CATEGORIES[0];
+    var p = { id:genId(), name:name, price:price, stock:0, openingStock:0, defaultStock:0, sku:"", category:category, pricingType:"unit", bundleQty:null, bundlePrice:null, produceActive:false };
     state.products.push(p);
     produceSelectedIds.add(p.id);
     nameInput.value = "";
