@@ -882,6 +882,7 @@
       <div id="produceStepSelect">
         <p class="hint" style="margin:0 0 12px;">先勾選今天有進貨、要上架的品項（生鮮蔬菜、麵包、蛋糕、肉蛋製品），下一步再輸入各項的數量。沒有勾選的品項今天會顯示已售完。</p>
         <input id="produceSearchInput" class="search-input" placeholder="搜尋商品名稱…" style="margin-bottom:10px;" />
+        <div class="category-filter" id="produceCategoryFilter" style="margin-bottom:10px;"></div>
         <div class="admin-booth-filter-head" style="margin-bottom:8px;">
           <span class="hint" id="produceSelectedCount">已選 0 項</span>
           <button class="btn btn-sm" id="produceSelectAllBtn" type="button">全選 / 取消全選</button>
@@ -1797,19 +1798,39 @@
   var ROTATING_CATEGORIES = ["生鮮蔬菜", "麵包", "蛋糕", "肉蛋製品"];
   var produceSelectedIds = null;
   var produceSearchTerm = "";
+  var produceCategoryFilter = "";
 
   function produceProducts(){
     return state.products.filter(function(p){ return ROTATING_CATEGORIES.indexOf(p.category) > -1; });
   }
 
+  function renderProduceCategoryPills(){
+    var container = document.getElementById("produceCategoryFilter");
+    var all = [""].concat(ROTATING_CATEGORIES);
+    container.innerHTML = all.map(function(c){
+      return '<button type="button" class="category-pill' + (c===produceCategoryFilter?" active":"") + '" data-cat="' + escapeHtml(c) + '">' + (c===""?"全部":escapeHtml(c)) + "</button>";
+    }).join("");
+    container.querySelectorAll(".category-pill").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        produceCategoryFilter = btn.dataset.cat;
+        renderProduceCategoryPills();
+        renderProduceCheckList();
+      });
+    });
+  }
+
   function renderProduceCheckList(){
     var term = produceSearchTerm.trim();
-    var list = produceProducts().filter(function(p){ return !term || p.name.indexOf(term) > -1; });
+    var list = produceProducts().filter(function(p){
+      if(produceCategoryFilter && p.category !== produceCategoryFilter) return false;
+      return !term || p.name.indexOf(term) > -1;
+    });
     var wrap = document.getElementById("produceCheckList");
     wrap.innerHTML = list.length===0 ? '<div class="empty-state">找不到符合的品項</div>' : list.map(function(p){
       var checked = produceSelectedIds.has(p.id);
+      var catTag = produceCategoryFilter ? "" : ('<span class="produce-check-cat">' + escapeHtml(p.category||"") + '</span>');
       return '<label class="produce-check-item' + (checked?' checked':'') + '" data-id="' + p.id + '">' +
-        '<input type="checkbox" class="produce-check-box"' + (checked?' checked':'') + ' /> ' + escapeHtml(p.name) + '<span class="produce-check-cat">' + escapeHtml(p.category||"") + '</span>' +
+        '<input type="checkbox" class="produce-check-box"' + (checked?' checked':'') + ' /> ' + escapeHtml(p.name) + catTag +
       '</label>';
     }).join("");
     wrap.querySelectorAll(".produce-check-item").forEach(function(row){
@@ -1831,8 +1852,10 @@
     if(all.length===0){ toast("目前沒有可上架的商品分類"); return; }
     produceSelectedIds = new Set(all.filter(function(p){ return p.produceActive; }).map(function(p){ return p.id; }));
     produceSearchTerm = "";
+    produceCategoryFilter = "";
     document.getElementById("produceSearchInput").value = "";
     document.getElementById("produceNewCategory").innerHTML = ROTATING_CATEGORIES.map(function(c){ return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; }).join("");
+    renderProduceCategoryPills();
     document.getElementById("produceStepSelect").hidden = false;
     document.getElementById("produceStepQty").hidden = true;
     document.getElementById("produceBackBtn").hidden = true;
