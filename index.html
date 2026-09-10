@@ -572,7 +572,7 @@
         <p class="hint" style="margin:0 0 12px;">開賣前確認好的「期初」庫存，收攤後點右上角「收攤盤點」輸入實際剩下的數量，就會自動算出今天每項賣出的數量與金額，方便回去登打主系統的出貨單。</p>
         <div id="stocktakeSummary"><div class="empty-state">今天還沒有盤點紀錄</div></div>
         <div class="export-row" id="stocktakeExportRow" hidden>
-          <button class="btn btn-sm" id="exportStocktakeBtn">匯出盤點結算表 (CSV)</button>
+          <button class="btn btn-sm" id="exportStocktakeBtn">匯出盤點結算表 (Excel)</button>
         </div>
       </div>
 
@@ -904,6 +904,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -2236,13 +2237,32 @@
   document.getElementById("exportStocktakeBtn").addEventListener("click", function(){
     var r = state.stocktakeResult;
     if(!r || r.date !== todayStr()){ toast("請先完成今日盤點"); return; }
-    var rows = [["品名","期初數量","期末剩餘","賣出數量","單價","金額"]];
-    r.rows.forEach(function(row){
-      rows.push([row.name, row.opening, row.closing, row.soldQty, row.price, row.amount]);
+    if(typeof XLSX === "undefined"){ toast("匯出元件載入失敗，請檢查網路後重新整理再試"); return; }
+    var title = "迦南地有機農場 " + (state.eventName || "攤位") + "(會)  " + r.date;
+    var header = ["項","分類","品名","單價","期初","期初小計","期末剩餘","賣出數","賣出小計","備註"];
+    var aoa = [[title], [], header];
+    r.rows.forEach(function(row, i){
+      var p = state.products.find(function(x){return x.id===row.id;});
+      aoa.push([
+        i+1,
+        (p && p.category) || "",
+        row.name,
+        row.price,
+        row.opening,
+        row.opening*row.price,
+        row.closing,
+        row.soldQty,
+        row.amount,
+        ""
+      ]);
     });
-    rows.push(["總計","","",r.totalQty,"",r.totalAmount]);
-    var fname = "盤點結算表-" + r.date + ".csv";
-    saveFile(fname, toCsv(rows));
+    aoa.push(["","","總計","","","","",r.totalQty,r.totalAmount,""]);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:9}}];
+    ws["!cols"] = [{wch:5},{wch:10},{wch:20},{wch:7},{wch:7},{wch:9},{wch:9},{wch:8},{wch:9},{wch:14}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "盤點結算表");
+    XLSX.writeFile(wb, "盤點結算表-" + r.date + ".xlsx");
   });
 
   document.getElementById("exportProductsBtn").addEventListener("click", function(){
