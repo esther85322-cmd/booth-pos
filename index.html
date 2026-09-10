@@ -244,6 +244,9 @@
   .produce-qty-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
   .produce-qty-row:last-child{border-bottom:none;}
   .produce-qty-input{width:84px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:16px;}
+  .produce-add-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line-strong);}
+  .produce-add-row input{flex:1 1 140px;padding:9px 11px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:16px;}
+  .produce-add-row #produceNewPrice{flex:0 1 90px;}
   .sess-tx-row{padding:8px 0;border-bottom:1px solid var(--line);}
   .sess-tx-row:last-child{border-bottom:none;}
   .sess-tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;}
@@ -858,6 +861,11 @@
           <button class="btn btn-sm" id="produceSelectAllBtn" type="button">全選 / 取消全選</button>
         </div>
         <div id="produceCheckList" class="produce-check-list"></div>
+        <div class="produce-add-row">
+          <input id="produceNewName" placeholder="新品項名稱" autocomplete="off" />
+          <input id="produceNewPrice" type="number" inputmode="decimal" min="0" placeholder="單價" autocomplete="off" />
+          <button class="btn btn-sm" id="produceAddNewBtn" type="button">＋ 新增品項</button>
+        </div>
       </div>
       <div id="produceStepQty" hidden>
         <p class="hint" style="margin:0 0 12px;">輸入今天每項的進貨數量。</p>
@@ -1784,6 +1792,31 @@
     var boxes = document.querySelectorAll(".produce-check-box");
     var allChecked = boxes.length>0 && Array.prototype.every.call(boxes, function(cb){ return cb.checked; });
     boxes.forEach(function(cb){ cb.checked = !allChecked; cb.dispatchEvent(new Event("change", {bubbles:true})); });
+  });
+
+  document.getElementById("produceAddNewBtn").addEventListener("click", function(){
+    var nameInput = document.getElementById("produceNewName");
+    var priceInput = document.getElementById("produceNewPrice");
+    var name = nameInput.value.trim();
+    if(!name){ toast("請輸入品項名稱"); return; }
+    var dup = produceProducts().find(function(p){ return p.name === name; });
+    if(dup){ toast("「" + name + "」已經在清單裡了"); return; }
+    var price = Math.max(0, Number(priceInput.value)||0);
+    var p = { id:genId(), name:name, price:price, stock:0, openingStock:0, defaultStock:0, sku:"", category:PRODUCE_CATEGORY, pricingType:"unit", bundleQty:null, bundlePrice:null, produceActive:false };
+    state.products.push(p);
+    produceSelectedIds.add(p.id);
+    nameInput.value = "";
+    priceInput.value = "";
+    produceSearchTerm = "";
+    document.getElementById("produceSearchInput").value = "";
+    markDirty(); saveState();
+    renderProduceCheckList();
+    updateProduceSelectedCount();
+    nameInput.focus();
+    toast("已新增「" + name + "」，記得勾選後輸入數量");
+  });
+  document.getElementById("produceNewName").addEventListener("keydown", function(e){
+    if(e.key === "Enter") document.getElementById("produceAddNewBtn").click();
   });
 
   document.getElementById("produceNextBtn").addEventListener("click", function(){
