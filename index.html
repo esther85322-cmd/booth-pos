@@ -296,6 +296,16 @@
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:200;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+  .sync-banner{position:fixed;top:0;left:0;right:0;z-index:250;padding:10px 14px;background:var(--danger);color:#fff;box-shadow:var(--shadow-md);}
+  .sync-banner.pending{background:var(--amber);}
+  .sync-banner.synced{background:var(--accent);}
+  .sync-banner-inner{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+  .sync-banner-dot{width:9px;height:9px;border-radius:99px;background:#fff;flex:none;animation:sync-pulse 1.1s ease-in-out infinite;}
+  .sync-banner.synced .sync-banner-dot{animation:none;}
+  @keyframes sync-pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .sync-banner-text{display:flex;flex-direction:column;gap:1px;font-size:12.5px;line-height:1.4;}
+  .sync-banner-text strong{font-size:13.5px;font-weight:700;}
+
   .gate-overlay{position:fixed;inset:0;background:var(--bg);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;}
   .gate-card{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
   .gate-card h1{font-family:var(--font-display);font-size:22px;margin:0;}
@@ -343,6 +353,16 @@
 </style>
 </head>
 <body>
+
+<div class="sync-banner" id="syncBanner" hidden>
+  <div class="sync-banner-inner">
+    <span class="sync-banner-dot"></span>
+    <div class="sync-banner-text">
+      <strong id="syncBannerTitle">網路已中斷</strong>
+      <span id="syncBannerMsg">有資料還沒有上傳到雲端，請確認網路連線，避免資料遺失。同步完成後再關閉頁面。</span>
+    </div>
+  </div>
+</div>
 
 <div class="gate-overlay" id="boothGate">
   <div class="gate-card">
@@ -1028,6 +1048,40 @@
   var boothUnsub = null;
   var cloudSyncTimer = null;
   var gateIndexUnsub = null;
+
+  var hasPendingWrites = false;
+  var syncedFlashTimer = null;
+  function updateSyncBanner(){
+    var banner = document.getElementById("syncBanner");
+    if(!banner) return;
+    clearTimeout(syncedFlashTimer);
+    if(!boothCode){ banner.hidden = true; return; }
+    var online = navigator.onLine;
+    var wasShown = !banner.hidden;
+    if(!online || hasPendingWrites){
+      banner.hidden = false;
+      banner.className = "sync-banner " + (!online ? "offline" : "pending");
+      document.getElementById("syncBannerTitle").textContent = !online ? "網路已中斷" : "資料同步中…";
+      document.getElementById("syncBannerMsg").textContent = !online
+        ? "有資料還沒有上傳到雲端，請確認網路連線，避免資料遺失。連上網路、同步完成後再關閉頁面。"
+        : "正在把資料上傳到雲端，請稍等，同步完成後再關閉頁面。";
+    } else if(wasShown){
+      banner.className = "sync-banner synced";
+      document.getElementById("syncBannerTitle").textContent = "已同步完成";
+      document.getElementById("syncBannerMsg").textContent = "資料已經上傳到雲端，可以安心關閉頁面了。";
+      syncedFlashTimer = setTimeout(function(){ banner.hidden = true; }, 4000);
+    } else {
+      banner.hidden = true;
+    }
+  }
+  window.addEventListener("online", updateSyncBanner);
+  window.addEventListener("offline", updateSyncBanner);
+  window.addEventListener("beforeunload", function(e){
+    if(boothCode && (hasPendingWrites || !navigator.onLine)){
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
 
   function saveState(){
     if(!boothCode || !boothDocRef) return;
@@ -2648,9 +2702,11 @@
   function subscribeBooth(){
     if(boothUnsub){ boothUnsub(); boothUnsub = null; }
     if(!boothDocRef) return;
-    boothUnsub = boothDocRef.onSnapshot(function(snap){
+    boothUnsub = boothDocRef.onSnapshot({includeMetadataChanges:true}, function(snap){
       if(!snap.exists) return;
-      if(snap.metadata && snap.metadata.hasPendingWrites) return;
+      hasPendingWrites = !!(snap.metadata && snap.metadata.hasPendingWrites);
+      updateSyncBanner();
+      if(hasPendingWrites) return;
       var incoming = snap.data();
       if(!isValidState(incoming)) return;
       if(JSON.stringify(incoming) === JSON.stringify(state)) return;
@@ -2671,6 +2727,7 @@
     boothDocRef = ref;
     stopGateIndexWatch();
     document.getElementById("boothGate").hidden = true;
+    updateSyncBanner();
     subscribeBooth();
     if(!state.sessionDate){ state.sessionDate = todayStr(); saveState(); }
     refreshAllUI();
@@ -2995,6 +3052,8 @@
     boothDocRef = null;
     state = null;
     cart = [];
+    hasPendingWrites = false;
+    updateSyncBanner();
     hideSessionGate();
     document.getElementById("gateCodeInput").value = "";
     document.getElementById("gateLoginPassword").value = "";
