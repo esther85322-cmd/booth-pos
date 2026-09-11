@@ -445,6 +445,7 @@
     <p class="gate-sub">上次使用的場次是 <strong id="lastSessionDateLabel"></strong>。開始新的一天，商品名稱與價格會自動沿用，庫存會套用每個商品設定的「預設庫存」（沒設定的則歸零）；也可以先看看之前的場次紀錄。</p>
     <button class="btn btn-primary" id="startNewSessionBtn" style="width:100%;justify-content:center;">＋ 開始今天的新場次</button>
     <button class="btn btn-sm" id="continueOldSessionBtn" style="width:100%;justify-content:center;">先不要，直接進入目前資料</button>
+    <button class="btn btn-sm" id="sessionGateBackBtn" style="width:100%;justify-content:center;">‹ 返回主選單</button>
     <div class="gate-section">
       <p class="hint" style="margin:6px 0 0;">過去場次紀錄</p>
       <div class="gate-booth-list" id="sessionList"></div>
@@ -2639,6 +2640,7 @@
   document.getElementById("continueOldSessionBtn").addEventListener("click", function(){
     hideSessionGate();
   });
+  document.getElementById("sessionGateBackBtn").addEventListener("click", logoutBooth);
 
   function openSessionView(session){
     var sales = session.sales || [];
