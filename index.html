@@ -233,6 +233,16 @@
   .admin-booth-name{font-weight:600;}
   .admin-booth-stats{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);}
   .admin-booth-stats b{color:var(--ink);font-weight:700;}
+
+  .balance-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);font-size:13px;}
+  .balance-row:last-child{border-bottom:none;}
+  .balance-row-main{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .balance-row-note{color:var(--ink-soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .balance-row-time{color:var(--ink-faint);font-size:11px;}
+  .balance-row-right{display:flex;align-items:center;gap:8px;flex:none;}
+  .balance-amount{font-family:var(--font-mono);font-weight:700;}
+  .balance-amount.pos{color:var(--accent-strong);}
+  .balance-amount.neg{color:var(--danger);}
   .admin-booth-filter{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
   .admin-booth-filter-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
   .admin-booth-checkbox-list{display:flex;flex-wrap:wrap;gap:8px;}
@@ -595,6 +605,7 @@
           <span class="section-title">今日盤點結算</span>
         </div>
         <p class="hint" style="margin:0 0 12px;">開賣前確認好的「期初」庫存，收攤後點右上角「收攤盤點」輸入實際剩下的數量，就會自動算出今天每項賣出的數量與金額，方便回去登打主系統的出貨單。</p>
+        <p class="hint" id="stocktakeBalanceNote" style="margin:0 0 12px;" hidden></p>
         <div id="stocktakeSummary"><div class="empty-state">今天還沒有盤點紀錄</div></div>
         <div class="export-row" id="stocktakeExportRow" hidden>
           <button class="btn btn-sm" id="exportStocktakeBtn">匯出盤點結算表 (Excel)</button>
@@ -642,6 +653,27 @@
             <label>幣別符號</label>
             <input id="currencyInput" maxlength="4" />
           </div>
+        </div>
+
+        <div class="card" style="grid-column:1/-1;">
+          <div class="section-title" style="margin-bottom:12px;">攤位差額</div>
+          <p class="hint" style="margin-top:0;">結算時現金如果比計算金額多或少，可以記一筆差額，下次同一個攤位結算時就能相抵，不用每次都硬要對到剛好。</p>
+          <div class="stat-tile" style="max-width:220px;margin-bottom:14px;">
+            <div class="stat-tile-label">目前差額</div>
+            <div class="stat-tile-value mono" id="balanceAmountDisplay">NT$0</div>
+          </div>
+          <div class="range-row">
+            <div class="field" style="min-width:140px;">
+              <label>調整金額（正負皆可）</label>
+              <input type="number" id="balanceAdjustInput" placeholder="例如 50 或 -30" />
+            </div>
+            <div class="field" style="min-width:220px;flex:1;">
+              <label>備註（選填）</label>
+              <input id="balanceAdjustNote" placeholder="例如：找零多收50元" />
+            </div>
+            <button class="btn btn-primary btn-sm" id="balanceAdjustBtn">新增調整</button>
+          </div>
+          <div id="balanceHistoryList"></div>
         </div>
 
         <div class="card">
@@ -1031,7 +1063,8 @@
         {id:genId(), name:"嘉寶果濃縮汁", price:120, stock:0, openingStock:0, sku:"", pricingType:"unit", bundleQty:null, bundlePrice:null}
       ],
       sales: [],
-      preorders: []
+      preorders: [],
+      balance: { amount: 0, history: [] }
     };
   }
 
@@ -2119,6 +2152,14 @@
   }
 
   function renderReports(){
+    var balNote = document.getElementById("stocktakeBalanceNote");
+    var bal = boothBalance();
+    if(bal.amount !== 0){
+      balNote.hidden = false;
+      balNote.innerHTML = '目前攤位差額：<strong class="' + (bal.amount>0?"balance-amount pos":"balance-amount neg") + '">' + (bal.amount>0?"+":"") + fmt(bal.amount) + '</strong>（可以在這次結算時相抵，到「設定」頁可以調整或查看紀錄）';
+    } else {
+      balNote.hidden = true;
+    }
     var sales = scopedSales();
     var revenue = sales.reduce(function(s,x){return s+x.total;},0);
     var count = sales.length;
@@ -2445,7 +2486,66 @@
     document.getElementById("boothCodeDisplay").textContent = boothCode || "—";
     document.getElementById("currentSessionDisplay").textContent = state.sessionDate || "—";
     document.getElementById("syncStatus").textContent = boothDocRef ? "雲端已連線，跨裝置即時同步" : "連線中…";
+    renderBalance();
   }
+
+  /* ---------- Per-booth running balance (carries across day sessions) ---------- */
+  function boothBalance(){
+    if(!state.balance) state.balance = { amount: 0, history: [] };
+    if(!Array.isArray(state.balance.history)) state.balance.history = [];
+    return state.balance;
+  }
+
+  function renderBalance(){
+    var amountEl = document.getElementById("balanceAmountDisplay");
+    if(!amountEl) return;
+    var bal = boothBalance();
+    amountEl.textContent = (bal.amount>0?"+":"") + fmt(bal.amount);
+    amountEl.className = "stat-tile-value mono " + (bal.amount>0 ? "balance-amount pos" : (bal.amount<0 ? "balance-amount neg" : ""));
+    var listEl = document.getElementById("balanceHistoryList");
+    var sorted = bal.history.slice().sort(function(a,b){ return new Date(b.ts)-new Date(a.ts); });
+    listEl.innerHTML = sorted.length===0 ? '<div class="empty-state">還沒有差額調整紀錄</div>' : sorted.map(function(h){
+      var timeLabel = new Date(h.ts).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+      return '<div class="balance-row" data-id="' + h.id + '">' +
+        '<div class="balance-row-main">' +
+          '<span class="balance-row-note">' + (h.note ? escapeHtml(h.note) : "（無備註）") + '</span>' +
+          '<span class="balance-row-time">' + timeLabel + '</span>' +
+        '</div>' +
+        '<div class="balance-row-right">' +
+          '<span class="balance-amount ' + (h.delta>0?"pos":"neg") + '">' + (h.delta>0?"+":"") + fmt(h.delta) + '</span>' +
+          '<button class="tx-delete" data-act="del" title="刪除這筆調整">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+    listEl.querySelectorAll(".balance-row").forEach(function(row){
+      var id = row.dataset.id;
+      row.querySelector('[data-act="del"]').addEventListener("click", function(){
+        confirmAction("刪除差額調整", "確定要刪除這筆調整紀錄嗎？目前差額會扣回這筆金額。", function(){
+          var bal2 = boothBalance();
+          var h = bal2.history.find(function(x){return x.id===id;});
+          if(h){
+            bal2.amount -= h.delta;
+            bal2.history = bal2.history.filter(function(x){return x.id!==id;});
+            markDirty(); saveState(); renderBalance();
+          }
+        });
+      });
+    });
+  }
+
+  document.getElementById("balanceAdjustBtn").addEventListener("click", function(){
+    var input = document.getElementById("balanceAdjustInput");
+    var noteInput = document.getElementById("balanceAdjustNote");
+    var val = Number(input.value);
+    if(!val){ toast("請輸入不為 0 的調整金額"); return; }
+    var bal = boothBalance();
+    bal.amount += val;
+    bal.history.push({ id: genId(), delta: val, note: noteInput.value.trim(), ts: new Date().toISOString() });
+    input.value = "";
+    noteInput.value = "";
+    markDirty(); saveState(); renderBalance();
+    toast("已新增差額調整");
+  });
   function logoutBooth(){
     confirmAction("切換攤位", "確定要登出目前的攤位「" + (boothCode||"") + "」嗎？資料仍會保留，下次登入需要再輸入一次密碼。", function(){
       if(boothUnsub){ boothUnsub(); boothUnsub = null; }
