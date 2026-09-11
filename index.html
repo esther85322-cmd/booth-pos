@@ -627,7 +627,7 @@
         </div>
         <div class="export-row">
           <button class="btn btn-sm" id="printReportBtn">列印銷售總表</button>
-          <button class="btn btn-sm" id="exportProductsBtn">匯出商品清單 (CSV)</button>
+          <button class="btn btn-sm" id="exportProductsBtn">匯出商品清單 (Excel)</button>
         </div>
       </div>
     </section>
@@ -2427,18 +2427,23 @@
   });
 
   document.getElementById("exportProductsBtn").addEventListener("click", function(){
-    var rows = [["商品名稱","編號","計價方式","單價","多件特價","庫存"]];
+    if(typeof XLSX === "undefined"){ toast("匯出元件載入失敗，請檢查網路後重新整理再試"); return; }
+    var aoa = [["商品名稱","分類","編號","計價方式","單價","多件特價","庫存"]];
     state.products.forEach(function(p){
       var isWeighed = p.pricingType === "weighed";
-      rows.push([
-        p.name, p.sku||"",
+      aoa.push([
+        p.name, p.category||"", p.sku||"",
         isWeighed ? "秤重計價" : "單價計件",
         isWeighed ? "" : p.price,
         (!isWeighed && p.bundleQty && p.bundlePrice) ? (p.bundleQty + "件" + p.bundlePrice) : "",
         isWeighed ? "不追蹤" : p.stock
       ]);
     });
-    saveFile("商品清單-" + new Date().toISOString().slice(0,10) + ".csv", toCsv(rows));
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{wch:22},{wch:10},{wch:10},{wch:10},{wch:8},{wch:12},{wch:8}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "商品清單");
+    XLSX.writeFile(wb, "商品清單-" + new Date().toISOString().slice(0,10) + ".xlsx");
   });
 
   function reportPrintHTML(){
