@@ -2431,6 +2431,7 @@
     var aoa = [["商品名稱","分類","編號","計價方式","單價","多件特價","庫存"]];
     state.products.forEach(function(p){
       var isWeighed = p.pricingType === "weighed";
+      if(!isWeighed && p.stock<=0) return;
       aoa.push([
         p.name, p.category||"", p.sku||"",
         isWeighed ? "秤重計價" : "單價計件",
